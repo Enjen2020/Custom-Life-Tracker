@@ -110,7 +110,7 @@
 .eliminated-panel{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;border-radius:15px;background:#0d0e1199;border:1px dashed #ffffff24;padding:10px}.eliminated-icon svg{width:30px;height:30px;color:#c9cbd2}.eliminated-title{font-size:clamp(15px,2vw,20px);font-weight:800;letter-spacing:.14em;text-transform:uppercase}.eliminated-reason{font-size:12px;color:var(--muted)}.eliminated-revive{display:inline-flex;align-items:center;gap:6px;margin-top:4px;min-height:34px;padding:6px 12px;border-radius:10px;border:1px solid #ffffff2a;background:#ffffff0d;color:#f3f4f6;font-size:12px;font-weight:750}.eliminated-revive svg{width:15px;height:15px}
 .bg-light .eliminated-panel{background:#ffffffa8;border-color:#00000024}.bg-light .eliminated-icon svg{color:#4e515b}.bg-light .eliminated-revive{color:#17181c;border-color:#0000002a;background:#0000000a}
 .player-card.is-active-turn{border-width:2px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--player-accent) 55%,transparent),0 0 26px color-mix(in srgb,var(--player-accent) 30%,transparent)}.player-card.is-active-turn:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--player-accent);z-index:3}
-.turn-clock{font-size:11px}.your-turn{font-size:11px;font-weight:850;letter-spacing:.12em;color:var(--player-accent)}.turn-clock .turn-time{font-size:13px;color:#e5e7eb}.bg-light .turn-clock .turn-time{color:#17181c}.pass-turn-btn{font-size:12px;min-height:32px;padding:6px 10px}
+.turn-clock{font-size:11px}.turn-clock .turn-time{font-size:13px;color:#e5e7eb}.bg-light .turn-clock .turn-time{color:#17181c}.pass-turn-btn{font-size:12px;min-height:32px;padding:6px 10px}
 .counter-row{gap:4px}.counter-badge{font-size:12px;min-height:26px;padding:4px 8px;gap:4px}.counter-badge .badge-symbol{font-size:12px}.commander-source-avatar{width:18px;height:18px;font-size:8px}.tax-badge .badge-symbol{font-size:10px}.partner-mark{font-size:9px}.more-badge{font-weight:800;color:var(--soft)}
 .card-tool-title{font-size:14px}.card-tool-head-btn{height:30px;min-width:30px;font-size:12px;padding:0 8px}.card-tool-head-btn svg{width:15px;height:15px}.card-menu-tile{font-size:13px;min-height:42px;padding:8px 9px;gap:8px}.card-menu-tile svg{width:17px;height:17px}.card-menu-tile span{white-space:normal;line-height:1.15;overflow-wrap:normal}
 .card-tool-note{font-size:12px;line-height:1.45;color:#a8abb5}.card-tool-row-title{font-size:13px}.card-tool-row-sub{font-size:12px;color:#adb0b9}.card-tool-mini-btn{font-size:12px;min-height:30px;padding:5px 9px}.card-tool-counter-btn{width:32px;height:32px;font-size:14px}.card-tool-counter-value{font-size:16px;min-width:26px}
@@ -128,7 +128,7 @@
 .layout-mini{display:grid;gap:4px;aspect-ratio:16/10;width:100%;padding:5px;border-radius:9px;background:#111216;border:1px solid #2e3037}
 .layout-mini span{display:grid;place-items:center;border-radius:5px;background:#2c2e35;color:#d7d9df;font-size:12px;font-weight:800;border:0 solid var(--accent)}
 .layout-mini .r0{border-bottom-width:4px}.layout-mini .r180{border-top-width:4px}.layout-mini .r90{border-left-width:4px}.layout-mini .r270{border-right-width:4px}
-@media(max-width:560px){.counter-badge{font-size:11px;min-height:23px;padding:3px 6px}.counter-badge .badge-symbol{font-size:11px}.card-menu-tile{font-size:12px;min-height:36px;padding:6px 7px}.card-tool-row-title{font-size:12px}.card-tool-row-sub,.card-tool-note{font-size:11px}.card-tool-head-btn{height:26px;min-width:26px;font-size:11px}.keypad-key{min-height:32px;font-size:15px}.table-btn{width:32px;height:32px}.player-name{font-size:12px}.tool-btn{width:28px;height:28px}.your-turn{font-size:10px}.turn-row{flex-wrap:wrap;row-gap:4px}.pass-turn-btn{font-size:11px;min-height:29px;padding:5px 8px}}
+@media(max-width:560px){.counter-badge{font-size:11px;min-height:23px;padding:3px 6px}.counter-badge .badge-symbol{font-size:11px}.card-menu-tile{font-size:12px;min-height:36px;padding:6px 7px}.card-tool-row-title{font-size:12px}.card-tool-row-sub,.card-tool-note{font-size:11px}.card-tool-head-btn{height:26px;min-width:26px;font-size:11px}.keypad-key{min-height:32px;font-size:15px}.table-btn{width:32px;height:32px}.player-name{font-size:12px}.tool-btn{width:28px;height:28px}.turn-row{flex-wrap:wrap;row-gap:4px}.pass-turn-btn{font-size:11px;min-height:29px;padding:5px 8px}}
 
 /* Card lookup layer */
 .lookup-layer{position:fixed;inset:0;z-index:90;background:var(--bg)}
@@ -170,7 +170,7 @@
 [data-theme="light"] .life-control{background:#ffffffb8;border-color:#00000012}[data-theme="light"] .life-value{color:#17181c}[data-theme="light"] .life-value.negative{color:#c0424a}[data-theme="light"] .life-mark{color:#00000040}
 [data-theme="light"] .life-delta{color:#2f8a57}[data-theme="light"] .life-delta.down{color:#c0424a}
 [data-theme="light"] .counter-badge{background:#ffffffb3;color:#24252a;border-color:#0000001f}[data-theme="light"] .counter-badge:hover{background:#fff}[data-theme="light"] .tax-badge,[data-theme="light"] .monarch-badge{color:#7a5f1c}[data-theme="light"] .tax-badge .badge-symbol,[data-theme="light"] .monarch-badge .badge-symbol{color:#a07c22}
-[data-theme="light"] .your-turn,[data-theme="light"] .counter-badge .badge-symbol{color:color-mix(in srgb,var(--player-accent) 55%,#000)}[data-theme="light"] .turn-clock{color:#4d5059}[data-theme="light"] .turn-clock .turn-time{color:#17181c}[data-theme="light"] .pass-turn-btn{background:color-mix(in srgb,var(--player-accent) 20%,#ffffff);color:#17181c}[data-theme="light"] .pass-turn-btn:hover{background:color-mix(in srgb,var(--player-accent) 32%,#ffffff)}
+[data-theme="light"] .counter-badge .badge-symbol{color:color-mix(in srgb,var(--player-accent) 55%,#000)}[data-theme="light"] .turn-clock{color:#4d5059}[data-theme="light"] .turn-clock .turn-time{color:#17181c}[data-theme="light"] .pass-turn-btn{background:color-mix(in srgb,var(--player-accent) 20%,#ffffff);color:#17181c}[data-theme="light"] .pass-turn-btn:hover{background:color-mix(in srgb,var(--player-accent) 32%,#ffffff)}
 [data-theme="light"] .eliminated-panel{background:#ffffffa8;border-color:#00000024}[data-theme="light"] .eliminated-icon svg{color:#4e515b}[data-theme="light"] .eliminated-revive{color:#17181c;border-color:#0000002a;background:#ffffffb3}
 /* Light theme: in-card tool panels */
 [data-theme="light"] .card-tool-header{border-bottom-color:#0000001a}[data-theme="light"] .card-tool-head-btn{border-color:#0000001f;background:#ffffffb3;color:#2a2c33}
@@ -232,7 +232,7 @@
 .card-tool-log-time,.card-tool-log-text{font-size:12px}.card-tool-dice-total,.card-tool-dice-options .die-label{font-size:12px}
 .keypad-key{min-height:44px;font-size:18px}
 .log-time,.log-tag,.history-date .month{font-size:12px}.log-text{font-size:14px}.history-players{font-size:13px}
-.pass-turn-btn{min-height:40px;font-size:13px}.your-turn,.turn-clock{font-size:12px}
+.pass-turn-btn{min-height:40px;font-size:13px}.turn-clock{font-size:12px}
 @media(max-width:560px){
   .table-btn{width:40px;height:40px}
   .tool-btn{width:36px;height:36px}
@@ -275,12 +275,9 @@
   .life-value{font-size:clamp(38px,22cqi,56px)}
 }
 /* #2 whose turn: a flag inside the life area, other seats dimmed a little */
-.turn-flag{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1;pointer-events:none;padding:4px 10px;border-radius:999px;background:var(--player-accent);color:#101114;font-size:12px;font-weight:850;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
-@container (max-width:190px){.turn-flag{top:auto;bottom:8px;font-size:12px;padding:3px 8px}}
 .table-grid.turns-on .player-card:not(.is-active-turn):not(.eliminated)::after{content:"";position:absolute;inset:0;border-radius:inherit;background:#0a0b0d;opacity:.35;pointer-events:none;z-index:0}
 .table-grid.turns-on .player-card:not(.is-active-turn):not(.eliminated){border-color:color-mix(in srgb,var(--player-accent) 35%,#34363e)}
 [data-theme="light"] .table-grid.turns-on .player-card:not(.is-active-turn):not(.eliminated)::after{background:#9ea2ab;opacity:.22}
-.player-card.is-active-turn .your-turn{display:none} /* the flag in the life area says it now */
 /* #3 stronger player colors: clearer border and a tinted header strip */
 .player-card{border-color:color-mix(in srgb,var(--player-accent) 62%,#34363e)}
 .player-card .player-header{padding:4px 6px 4px 4px;border-radius:12px;background:color-mix(in srgb,var(--player-accent) 18%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--player-accent) 30%,transparent)}
@@ -290,8 +287,6 @@
 .life-value.low{color:#f0c060}[data-theme="light"] .life-value.low,.bg-light .life-value.low{color:#8a5a00}
 .life-warn{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:1;pointer-events:none;font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#f0c060;white-space:nowrap}
 .life-warn.neg{color:var(--red)}[data-theme="light"] .life-warn,.bg-light .life-warn{color:#8a5a00}[data-theme="light"] .life-warn.neg,.bg-light .life-warn.neg{color:#b3383f}
-.player-card.is-active-turn .life-warn{bottom:auto;top:44px}
-@container (max-width:190px){.player-card.is-active-turn .life-warn{top:auto;bottom:34px}}
 .counter-badge.near-lethal{border-color:#f0c060;background:#f0c06024;color:#ffe2a3}
 [data-theme="light"] .counter-badge.near-lethal,.bg-light .counter-badge.near-lethal{border-color:#8a5a00;background:#f0c06033;color:#5a3a00}
 .warn-mark{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#f0c060;color:#101114;font-size:12px;font-weight:900;margin-left:2px}
@@ -458,7 +453,6 @@ footer{flex-direction:column;align-items:center;gap:6px}
   .life-value{font-size:clamp(26px,26cqh,56px)!important}
   .turn-clock .turn-time{font-size:12px}
   .card-foot .counter-badge{min-height:28px;padding:2px 7px}
-  .turn-flag{top:6px;padding:2px 8px}
 }
 @container (max-height:150px){
   #table-grid .player-slot .tool-btn{width:30px;height:30px}
@@ -468,7 +462,6 @@ footer{flex-direction:column;align-items:center;gap:6px}
   .life-value{font-size:clamp(24px,28cqh,48px)!important}
   .card-foot .counter-badge{min-height:26px}
   .pass-turn-btn{min-height:30px;padding:3px 8px}
-  .turn-flag{display:none} /* no room: the highlighted border and Pass Turn button show whose turn it is */
 }
 /* narrow and short: show just the time and the Pass Turn button */
 @container (max-height:320px) and (max-width:240px){
@@ -563,7 +556,7 @@ footer{flex-direction:column;align-items:center;gap:6px}
   <div class="help-item"><div class="help-icon"><svg><use href="#i-play"/></svg></div><div><strong>Starting a game</strong><p>Tap <b>Start Game</b>. Choose the number of players, tap <b>20</b>, <b>30</b> or <b>40</b> for starting life (or type any number), name each seat or pick a saved profile, and choose the table layout so each card faces its player. Then tap Start Game. <b>Quick Start</b> reuses your last setup, and <b>Resume Game</b> continues a game you left.</p></div></div>
   <div class="help-item"><div class="help-icon"><svg><use href="#i-swords"/></svg></div><div><strong>Changing life</strong><p>Tap the left or right side of a life total for −1 or +1. Hold either side to change it by 10 at a time. Quick taps are grouped, and the running change shows beside the total. Tap the middle to type an exact total. Several players can tap their own cards at the same time.</p></div></div>
   <div class="help-item"><div class="help-icon"><svg><use href="#i-hub"/></svg></div><div><strong>The center button</strong><p>The round clock button where the cards meet opens the table menu: game time, Start / Pause / Resume timers, Game Log, Table Layout, turn direction, End Game, Help and Main Menu. A green dot on it means the timers are running; amber means paused. <b>Undo</b>, right beside it, reverses the latest action anywhere on the table (dice rolls aren't undone).</p></div></div>
-  <div class="help-item"><div class="help-icon"><svg><use href="#i-rotate"/></svg></div><div><strong>Turns and timers</strong><p>Open the center button and tap <b>Start Timer</b>, then choose who goes first and the turn direction. The active player's card shows <b>Your turn</b> and their turn time; <b>Pass Turn</b> moves to the next player and skips anyone eliminated. Pause stops both clocks. If the app is closed mid-game, it reopens paused.</p></div></div>
+  <div class="help-item"><div class="help-icon"><svg><use href="#i-rotate"/></svg></div><div><strong>Turns and timers</strong><p>Open the center button and tap <b>Start Timer</b>, then choose who goes first and the turn direction. The active player's card gets a highlighted border, their turn time and a <b>Pass Turn</b> button, which moves to the next player and skips anyone eliminated. Pause stops both clocks. If the app is closed mid-game, it reopens paused.</p></div></div>
   <div class="help-item"><div class="help-icon"><svg><use href="#i-grid"/></svg></div><div><strong>Your player menu</strong><p>Tap <svg class="inline-icon" role="img" aria-label="(four squares)"><use href="#i-grid"/></svg> on your card for: <b>Customize</b> (name, color, picture, card design, partner commander, and saved profiles to reuse), <b>Counters</b>, <b>Commander Damage</b>, <b>Commander Tax</b>, <b>Monarch</b>, <b>Dungeon</b>, <b>Dice Roller</b> (dice and coins), <b>Look Up Card</b>, <b>Set Life</b> and <b>Eliminate</b>. On small cards the menu opens over the table, still facing you.</p></div></div>
   <div class="help-item"><div class="help-icon"><svg><use href="#i-sliders"/></svg></div><div><strong>Commander damage and counters</strong><p>Fastest way: <b>press and hold the middle of your life total</b>, pick whose commander hit you, then adjust the amount; it changes your life too. Each source gets its own badge on your card; tap a badge to adjust it. Turn on Partner commander in Customize to track both partners. Commander Tax goes up 2 mana per step. Poison, experience, energy and rad live under Counters, where you can also add, rename or delete your own.</p></div></div>
   <div class="help-item"><div class="help-icon"><svg><use href="#i-dungeon"/></svg></div><div><strong>Dungeons and the initiative</strong><p>Tap <b>Dungeon</b> in your player menu. To venture into the dungeon, pick Lost Mine of Phandelver, Dungeon of the Mad Mage or Tomb of Annihilation, then tap the next room each time you venture. Where the path splits, you choose. The map shows where you are and each room's effect. Reaching the last room completes the dungeon and adds it to your completed count. <b>Take the initiative</b> to venture into Undercity (or into the next room of the dungeon you're in). The player with the initiative gets a badge, and at the start of their upkeep they tap <b>Venture into Undercity</b>. If they're eliminated, the next player in turn order takes it. Undo reverses any of these.</p></div></div>
@@ -920,10 +913,9 @@ ensureTurnState(g);updateGameClocks();const undoBtn=$('#table-undo-btn');if(undo
    <button class="life-zone left" data-life-zone="left" data-player-id="${p.id}" aria-label="Decrease ${esc(p.name)} life by one, hold to decrease by ten"></button>
    <button class="life-zone center" data-life-zone="center" data-player-id="${p.id}" aria-label="Set exact life total for ${esc(p.name)}; press and hold for commander damage"></button>
    <button class="life-zone right" data-life-zone="right" data-player-id="${p.id}" aria-label="Increase ${esc(p.name)} life by one, hold to increase by ten"></button>
-   ${active?'<span class="turn-flag">Your turn</span>':''}
    <div class="life-value ${p.life<0?'negative':''} ${isLowLife(p)?'low':''}">${p.life}</div>${lifeDeltaMarkup(p)}${lifeWarnMarkup(p)}
   </div>
-  <div class="card-foot"><div class="turn-row">${active?`<div class="turn-clock"><span class="your-turn">YOUR TURN</span> <span class="turn-time" data-turn-elapsed="${p.id}">${formatDuration(clockNow(g)-(g.turnStartedAt||clockNow(g)))}</span></div><button class="pass-turn-btn" data-action="pass-turn" data-player-id="${p.id}" aria-label="Pass turn from ${esc(p.name)}">Pass Turn ${icon('chevron')}</button>`:''}</div>
+  <div class="card-foot"><div class="turn-row">${active?`<div class="turn-clock"><span class="turn-time" data-turn-elapsed="${p.id}">${formatDuration(clockNow(g)-(g.turnStartedAt||clockNow(g)))}</span></div><button class="pass-turn-btn" data-action="pass-turn" data-player-id="${p.id}" aria-label="Pass turn from ${esc(p.name)}">Pass Turn ${icon('chevron')}</button>`:''}</div>
   <div class="counter-row">${badgeMarkup(p)}</div></div>`;return `<div class="player-slot rot-${p.rotation||0}" style="grid-area:${seatArea}" data-player-slot data-player-id="${p.id}" data-rotation="${p.rotation||0}"><article class="${cardClass(p)} ${active?'is-active-turn':''}" data-player-card="${p.id}" style="--player-accent:${playerAccent(p)}">${cardContent}</article></div>`;}).join('');if(focusState){const el=document.getElementById(focusState.id);if(el){el.focus({preventScroll:true});try{if(focusState.start!==null)el.setSelectionRange(focusState.start,focusState.end);}catch(_){}}}requestAnimationFrame(()=>{fitRotatedCards();if(shell)shell.scrollTop=viewState.shellTop;$$('#table-grid [data-card-panel-owner]').forEach(panel=>{const body=panel.querySelector('[data-card-tool-body]');if(body){const key=`${panel.dataset.cardPanelOwner}:${panel.dataset.cardPanelType}`;body.scrollTop=Number(cardToolScrollPositions[key]||0);}});window.scrollTo?.(viewState.windowX,viewState.windowY);requestAnimationFrame(()=>{if(shell)shell.scrollTop=viewState.shellTop;$$('#table-grid [data-card-panel-owner]').forEach(panel=>{const body=panel.querySelector('[data-card-tool-body]');if(body){const key=`${panel.dataset.cardPanelOwner}:${panel.dataset.cardPanelType}`;body.scrollTop=Number(cardToolScrollPositions[key]||0);}});window.scrollTo?.(viewState.windowX,viewState.windowY);});});updateGameClocks();}
 function swapSeatPositions(sourceId,targetId){const g=currentGame();if(!g||!sourceId||!targetId||sourceId===targetId)return;const seats=normalizedSeatOrder(g).slice(),beforeSeatOrder=seats.slice(),sourceIndex=seats.indexOf(sourceId),targetIndex=seats.indexOf(targetId);if(sourceIndex<0||targetIndex<0||sourceIndex===targetIndex)return;const beforeTurnOrder=(g.turnOrder||[]).slice();[seats[sourceIndex],seats[targetIndex]]=[seats[targetIndex],seats[sourceIndex]];g.seatOrder=seats;g.turnOrder=turnOrderForSeats(seats,g.turnDirection);const source=getPlayer(sourceId),target=getPlayer(targetId);
 // Rotation comes from the seat, so each card automatically faces the edge it moved to.
