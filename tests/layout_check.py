@@ -45,6 +45,12 @@ SETUP = """(() => {
   saveStore(); renderGame();
 })()"""
 
+FONT = """addEventListener('DOMContentLoaded', () => {
+  const s = document.createElement('style');
+  s.textContent = '*{font-family:Roboto,Inter,Arial,sans-serif !important}';
+  document.head.appendChild(s);
+})"""
+
 
 def serve(folder):
     class Quiet(http.server.SimpleHTTPRequestHandler):
@@ -64,6 +70,9 @@ async def main():
             ctx = await browser.new_context(viewport={'width': 390, 'height': 844})
             page = await ctx.new_page()
             page.on('pageerror', lambda e: errors.append(str(e)))
+            # Measure with a phone font (Android's Roboto when installed): the default Linux font is much
+            # wider than the fonts phones use, and would report problems no phone shows.
+            await page.add_init_script(FONT)
             await page.goto(url)
             await page.wait_for_timeout(300)
             await page.click('[data-action="go-setup"]')
