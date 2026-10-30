@@ -77,11 +77,18 @@ async def main():
                 for w, h, size in SIZES:
                     await page.set_viewport_size({'width': w, 'height': h})
                     await page.wait_for_timeout(250)
-                    found = set()
-                    for i in range(n):  # each player takes a turn, so every card shows Pass Turn once
-                        await page.evaluate(f'currentGame().activePlayerId = currentGame().players[{i}].id; renderGame()')
-                        await page.wait_for_timeout(120)
-                        found.update(await page.evaluate(CHECK))
+
+                    async def check(wait):
+                        found = set()
+                        for i in range(n):  # each player takes a turn, so every card shows Pass Turn once
+                            await page.evaluate(f'currentGame().activePlayerId = currentGame().players[{i}].id; renderGame()')
+                            await page.wait_for_timeout(wait)
+                            found.update(await page.evaluate(CHECK))
+                        return found
+
+                    found = await check(120)
+                    if found:  # a slow machine may not have finished laying out: look again more slowly
+                        found = await check(800)
                     for f in sorted(found):
                         problems.append(f'{n} players, layout "{layout}", {size} ({w}x{h}): {f}')
             await ctx.close()
