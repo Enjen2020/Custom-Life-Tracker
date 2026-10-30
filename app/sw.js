@@ -1,6 +1,6 @@
 /* Oracle Scanner service worker: keeps the app, the text reader, fonts and viewed card
    images available offline. Card data itself is saved by the app (IndexedDB), not here. */
-const SHELL = 'shell-v1';
+const SHELL = 'shell-v2';
 const RUNTIME = 'runtime-v1';
 const IMAGES = 'images-v1';
 const MAX_IMAGES = 1500; // roughly 100 MB of card pictures
@@ -12,7 +12,15 @@ const SHELL_FILES = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(SHELL).then(c => Promise.all(SHELL_FILES.map(f => c.add(f).catch(() => {})))));
+  e.waitUntil(caches.open(SHELL).then(async c => {
+    await Promise.all(SHELL_FILES.map(f => c.add(f).catch(() => {})));
+    // every mana symbol, so card text looks right offline
+    try {
+      const map = await (await fetch('symbols/index.json')).json();
+      await c.put('symbols/index.json', new Response(JSON.stringify(map), { headers: { 'Content-Type': 'application/json' } }));
+      await Promise.all(Object.values(map).map(f => c.add('symbols/' + encodeURIComponent(f)).catch(() => {})));
+    } catch {}
+  }));
   self.skipWaiting();
 });
 

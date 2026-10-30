@@ -106,6 +106,14 @@ h1 span{color:var(--gold)}
 .meta a{color:var(--gold)}
 .example{display:inline-block;font:600 .75rem var(--f-ui);letter-spacing:.12em;text-transform:uppercase;border:1px dashed var(--muted);color:var(--muted);border-radius:6px;padding:1px 8px}
 
+.cmdr{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.cmdr > div{display:flex;align-items:center;gap:8px;margin-right:4px}
+.pips{display:inline-flex;align-items:center;gap:2px;font:600 .95rem var(--f-ui)}
+.pips .sym{width:1.3em;height:1.3em}
+.tag{font:700 .8rem var(--f-ui);letter-spacing:.1em;text-transform:uppercase;border-radius:6px;padding:3px 10px;border:1px solid var(--line)}
+.tag.gc{color:var(--gold);border-color:var(--gold)}
+.tag.lead{color:var(--legal);border-color:var(--legal)}
+.tag.ban{color:var(--banned);border-color:var(--banned)}
 .legal{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
 .legal div{display:flex;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;font:500 .9rem var(--f-ui)}
 .legal span:last-child{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.8rem}
@@ -240,6 +248,7 @@ const CardData = (() => {
       set_name: data.sets[set] || set.toUpperCase(), rarity: RARITY[rar] || 'common',
       legalities: Object.fromEntries(data.formats.map((k, i) => [k, LEGAL[o.g[i]] || 'not_legal'])),
       scryfall_uri: `https://scryfall.com/card/${set}/${encodeURIComponent(num)}`,
+      color_identity: (o.ci || '').split('').filter(Boolean), game_changer: !!o.gc,
       _rulings: (o.r || []).map(([published_at, source, comment]) => ({ published_at, source, comment }))
     };
     if (o.f) {
@@ -268,7 +277,7 @@ const CardData = (() => {
     for (const [nm, oid] of idx.names) {
       if (nm === n) return oid;
       let s;
-      if (n.length >= 4 && nm.startsWith(n)) s = (nm.length - n.length) * 0.03;
+      if (n.length >= 4 && nm.startsWith(n)) s = 0.2 * (1 - n.length / nm.length); // start of a longer name: shortest wins
       else if (Math.abs(nm.length - n.length) > Math.max(3, n.length * 0.4)) continue;
       else s = lev(nm, n) / Math.max(nm.length, n.length);
       if (s < score) { score = s; best = oid; }
@@ -422,9 +431,15 @@ const ui = { stream: null, track: null, busy: false, lastTried: '', lastCode: ''
 
 function setStatus(msg, kind = '') { const s = $('status'); s.textContent = msg; s.className = 'status ' + kind; }
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let SYMBOLS = null; // {"{W/P}": "WP.svg", ...} published with the app, so symbols work offline
+const symbolsReady = fetch('symbols/index.json').then(r => r.ok ? r.json() : null).then(m => { SYMBOLS = m; }).catch(() => {});
+function symbolSrc(s) {
+  const file = SYMBOLS?.['{' + s + '}'];
+  return file ? 'symbols/' + encodeURIComponent(file)
+    : `https://svgs.scryfall.io/card-symbols/${encodeURIComponent(s.replace(/\//g, ''))}.svg`;
+}
 function symbols(text) {
-  return esc(text).replace(/\{([^}]+)\}/g, (m, s) =>
-    `<img class="sym" alt="{${s}}" src="https://svgs.scryfall.io/card-symbols/${encodeURIComponent(s.replace(/\//g, ''))}.svg">`);
+  return esc(text).replace(/\{([^}]+)\}/g, (m, s) => `<img class="sym" alt="{${s}}" src="${symbolSrc(s)}">`);
 }
 function oracleHTML(text) {
   if (!text) return '';
@@ -545,6 +560,23 @@ const LANGS = { ja: 'Japanese', ko: 'Korean', zhs: 'Simplified Chinese', zht: 'T
   de: 'German', fr: 'French', it: 'Italian', es: 'Spanish', pt: 'Portuguese', ph: 'Phyrexian' };
 const STATUS = { legal: 'Legal', not_legal: 'No', banned: 'Banned', restricted: 'Restricted' };
 
+function commanderHTML(card, faces) {
+  const ci = card.color_identity || [];
+  const pips = ci.length ? ci.map(c => `<img class="sym" alt="{${c}}" src="${symbolSrc(c)}">`).join('')
+                         : `<img class="sym" alt="{C}" src="${symbolSrc('C')}"> Colorless`;
+  const text = faces.map(f => f.oracle_text || '').join('\n') + (card.oracle_text || '');
+  const canLead = /\bLegendary\b.*\bCreature\b/.test(faces[0].type_line || card.type_line || '')
+    || /can be your commander/i.test(text);
+  const status = card.legalities?.commander || 'not_legal';
+  return `<section class="block"><h3>Commander</h3>
+    <div class="cmdr">
+      <div><span class="label">Color identity</span><span class="pips">${pips}</span></div>
+      ${card.game_changer ? '<span class="tag gc" title="On the Commander Game Changers list, which affects bracket choices">Game Changer</span>' : ''}
+      ${canLead && status !== 'not_legal' ? '<span class="tag lead">Can be your commander</span>' : ''}
+      ${status === 'banned' ? '<span class="tag ban">Banned in Commander</span>' : ''}
+    </div></section>`;
+}
+
 function faceHTML(f, card) {
   const stats = f.power != null ? `${esc(f.power)}/${esc(f.toughness)}` : f.loyalty != null ? `Loyalty ${esc(f.loyalty)}` : f.defense != null ? `Defense ${esc(f.defense)}` : '';
   return `<div class="face">
@@ -573,6 +605,7 @@ async function showCard(card, { example = false } = {}) {
           <a href="${esc(card.scryfall_uri)}" target="_blank" rel="noopener">Open on Scryfall</a></div>
       </div>
     </div>
+    ${commanderHTML(card, faces)}
     <section class="block"><h3>Legality</h3>
       <div class="legal">${FORMATS.map(([k, n]) => `<div><span>${n}</span><span class="s-${leg[k] || 'not_legal'}">${STATUS[leg[k]] || 'No'}</span></div>`).join('')}</div>
     </section>
@@ -700,7 +733,7 @@ addEventListener('offline', renderData);
 renderHistory();
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
 (async () => {
-  await CardData.loadSaved();
+  await Promise.all([CardData.loadSaved(), Promise.race([symbolsReady, new Promise(r => setTimeout(r, 1500))])]);
   renderData();
   navigator.storage?.persist?.().catch(() => {});   // ask the browser not to clear saved cards
   const h = loadHistory();
