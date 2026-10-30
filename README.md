@@ -2,7 +2,7 @@
 
 Scan a Magic: The Gathering card with your phone's camera to see its Oracle text, legality and official rulings. Works offline once the card data is saved on your device.
 
-**Live app:** https://enjen2020.github.io/oracle-scanner/
+**Live app:** https://enjen2020.github.io/Oracle-Scanner/
 
 Card data, images and rulings come from [Scryfall](https://scryfall.com). Not affiliated with Wizards of the Coast.
 
