@@ -113,7 +113,7 @@ def build(oracle_src, rulings_src, default_src):
             entry["r"] = sorted(rulings[oid])
         oracle[oid] = entry
 
-    sets, prints = {}, []
+    sets, prints, prices = {}, [], {}
     for c in stream(default_src):
         if c.get("layout") in SKIP_LAYOUTS:
             continue
@@ -126,9 +126,24 @@ def build(oracle_src, rulings_src, default_src):
         # [id, set, number, oracle_id, lang, rarity, has_back_image, printed_name, image_url]
         prints.append([c["id"], c["set"], c["collector_number"], oid, c.get("lang", "en"),
                        RARITY_CODE.get(c.get("rarity"), "c"), back, printed or 0, url or 0])
+        pr = c.get("prices") or {}
+        usd = [to_price(pr.get(k)) for k in ("usd", "usd_foil", "usd_etched")]
+        if any(v is not None for v in usd):
+            prices[c["id"]] = usd  # [normal, foil, etched] in US dollars
 
     prints.sort(key=lambda p: p[0])  # stable order, so unchanged data gives an unchanged version
-    return {"formats": FORMATS, "sets": sets, "oracle": oracle, "prints": prints}
+    return {"formats": FORMATS, "sets": sets, "oracle": oracle, "prints": prints}, prices
+
+
+def to_price(v):
+    try:
+        return round(float(v), 2) if v not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def fingerprint(obj):
+    return hashlib.sha256(json.dumps(obj, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 
 
 def build_symbols(site_dir):
@@ -164,15 +179,22 @@ def main():
         srcs = [download_url(idx[k]) for k in ("oracle_cards", "rulings", "default_cards")]
         symbols = build_symbols(out_dir.parent)
 
-    data = build(*srcs)
-    # The version is a fingerprint of the contents: phones only re-download when something changed.
-    version = hashlib.sha256(json.dumps(data, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+    data, prices = build(*srcs)
+    built = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    # Versions are fingerprints of the contents: phones only re-download what changed.
+    # Prices live in their own small file because they change every day.
+    version = fingerprint(data)
     data["version"] = version
     body = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
     (out_dir / "cards.json").write_text(body, encoding="utf-8")
 
-    meta = {"version": version, "built": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "cards": len(data["oracle"]), "printings": len(data["prints"]), "bytes": len(body.encode("utf-8")), "symbols": symbols}
+    prices_version = fingerprint(prices)
+    prices_body = json.dumps({"version": prices_version, "date": built, "p": prices}, separators=(",", ":"))
+    (out_dir / "prices.json").write_text(prices_body, encoding="utf-8")
+
+    meta = {"version": version, "built": built,
+            "cards": len(data["oracle"]), "printings": len(data["prints"]), "bytes": len(body.encode("utf-8")),
+            "prices_version": prices_version, "prices_bytes": len(prices_body), "priced": len(prices), "symbols": symbols}
     (out_dir / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
     print(json.dumps(meta))
 

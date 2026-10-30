@@ -9,7 +9,8 @@ Card data, images and rulings come from [Scryfall](https://scryfall.com). Not af
 ## How it works
 
 - **Scanning:** reads the card name in the gold bar. For Japanese and other non-English printings, it reads the set code and collector number in the bottom-left corner instead.
-- **Offline:** the app saves every card's text, legality and rulings on your device (about 30 MB) and refreshes it when you're online. Card pictures are saved as you look cards up.
+- **Offline:** the app saves every card's text, legality, rulings and prices on your device and refreshes them when you're online. Card pictures are saved as you look cards up.
+- **Prices:** TCGplayer market prices via Scryfall, refreshed daily in a separate small file, so the big card file only downloads when cards change.
 - **Daily updates:** a GitHub job rebuilds the card data from Scryfall every day and republishes the app. You don't need to do anything.
 
 ## Files
