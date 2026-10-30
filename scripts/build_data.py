@@ -133,4 +133,17 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        detail = f"{type(exc).__name__}: {exc}"
+        if hasattr(exc, "read"):  # HTTP errors: include what the server said
+            try:
+                detail += " | " + exc.read()[:300].decode("utf-8", "replace")
+            except Exception:
+                pass
+        # Shows up on the run's summary page as a readable error.
+        print("::error title=Card data build failed::" + detail.replace("\n", " "))
+        sys.exit(1)
