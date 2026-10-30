@@ -6,6 +6,8 @@ Writes <output_dir>/data/cards.json and <output_dir>/data/meta.json.
 
 Scryfall bulk data: https://scryfall.com/docs/api/bulk-data
 """
+import gzip
+import io
 import json
 import sys
 import urllib.request
@@ -32,14 +34,26 @@ def bulk_index():
         return {b["type"]: b for b in json.load(r)["data"]}
 
 
+def download_url(entry):
+    # Scryfall renamed this field in Oct 2026 when the files became gzip-compressed JSON Lines.
+    return entry.get("jsonl_download_uri") or entry["download_uri"]
+
+
 def stream(source):
-    """Yield card objects from a URL or a local JSON file (local files are used for testing)."""
-    if source.startswith("http"):
-        with open_url(source) as r:
-            yield from ijson.items(r, "item", use_float=True)
-    else:
-        with open(source, "rb") as f:
-            yield from ijson.items(f, "item", use_float=True)
+    """Yield card objects from a URL or a local file. Handles both formats Scryfall has used:
+    a JSON array, and gzip-compressed JSON Lines (one card per line)."""
+    raw = open_url(source) if source.startswith("http") else open(source, "rb")
+    with raw:
+        buf = io.BufferedReader(raw, 1 << 20)
+        if buf.peek(2)[:2] == b"\x1f\x8b":  # gzip
+            buf = io.BufferedReader(gzip.GzipFile(fileobj=buf), 1 << 20)
+        if buf.peek(256).lstrip()[:1] == b"[":
+            yield from ijson.items(buf, "item", use_float=True)
+        else:
+            for line in buf:
+                line = line.strip().rstrip(b",")
+                if line and line not in (b"[", b"]"):
+                    yield json.loads(line)
 
 
 def face(f):
@@ -118,7 +132,7 @@ def main():
         srcs, version = sys.argv[2:5], "local-test"
     else:
         idx = bulk_index()
-        srcs = [idx["oracle_cards"]["download_uri"], idx["rulings"]["download_uri"], idx["default_cards"]["download_uri"]]
+        srcs = [download_url(idx[k]) for k in ("oracle_cards", "rulings", "default_cards")]
         version = max(idx[k]["updated_at"] for k in ("oracle_cards", "rulings", "default_cards"))
 
     data = build(*srcs)
