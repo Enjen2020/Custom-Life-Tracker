@@ -185,6 +185,7 @@ section.block > h3::after{content:"";flex:1;height:1px;background:var(--line)}
 .meta{font-size:.85rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
 .meta a{color:var(--text);text-underline-offset:3px}
 .again{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));align-self:center;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.cmdr-actions{display:flex;flex-wrap:wrap;gap:8px}.cmdr-actions:empty{display:none}
 .placeholder{border:1px dashed var(--line);border-radius:var(--r);padding:28px;color:var(--muted);text-align:center}
 footer{grid-column:1/-1;font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
 footer a{color:var(--muted)}
@@ -596,7 +597,8 @@ const CardScanner = (() => {
 const $ = id => document.getElementById(id);
 const video = $('video'), viewport = $('viewport'), band = $('band');
 const work = document.createElement('canvas'), ctx = work.getContext('2d', { willReadFrequently: true });
-const ui = { stream: null, track: null, busy: false, auto: true, lastTried: '', lastCode: '', timer: null, torch: false, mode: 'scan' };
+const ui = { stream: null, track: null, busy: false, auto: true, lastTried: '', lastCode: '', timer: null, torch: false, mode: 'scan', lookupFor: null, card: null };
+const EMBED = document.documentElement.classList.contains('embed'); // opened inside the life tracker
 
 function setStatus(msg, kind = '') { const s = $('status'); s.textContent = msg; s.className = 'status ' + kind; }
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -808,6 +810,7 @@ async function showCard(card, { example = false, scroll = false } = {}) {
       <div class="info">
         ${example ? '<span class="example">Example card</span>' : ''}
         ${faces.map(f => faceHTML(f, card)).join('')}
+        <div class="cmdr-actions" id="cmdr-actions"></div>
         ${foreign ? `<div class="printed">Printed as <b>${esc(printedName || card.name)}</b> (${esc(LANGS[card.lang] || card.lang)}). Text shown is the English Oracle text.</div>` : ''}
       </div>
     </div>
@@ -828,6 +831,8 @@ async function showCard(card, { example = false, scroll = false } = {}) {
     if (!ui.stream) startCamera(); else setStatus('Line up the card name with the gold bar.');
   });
   if (!example) remember(card);
+  ui.card = example ? null : card; renderCommanderActions();
+  if (EMBED && !example) parent.postMessage({ type: 'card-looked-up', playerId: ui.lookupFor?.id || null, name: card.name, set: card.set, num: card.collector_number }, location.origin);
   if (scroll && matchMedia('(max-width:860px)').matches) $('result').scrollIntoView({ behavior: 'smooth' });
 
   loadPrintings(card);
@@ -862,6 +867,39 @@ async function loadPrintings(card) {
 document.addEventListener('click', async e => {
   const b = e.target.closest('.pv'); if (!b || b.getAttribute('aria-current')) return;
   try { showCard(await CardScanner.byId(b.dataset.id)); } catch (err) { setStatus('Lookup failed: ' + err.message, 'error'); }
+});
+
+/* --- inside the life tracker: set the shown card as the player's commander --- */
+function renderCommanderActions() {
+  const box = $('cmdr-actions'); if (!box) return;
+  const p = ui.lookupFor, card = ui.card;
+  if (!EMBED || !p || !card) { box.innerHTML = ''; return; }
+  const isMain = p.commander === card.name, isPartner = p.commander2 === card.name;
+  box.innerHTML = `<button class="btn primary" data-set-commander="1"${isMain ? ' disabled' : ''}>${isMain ? `${esc(p.name)}'s commander ✓` : `Set as ${esc(p.name)}'s commander`}</button>`
+    + (p.partner ? `<button class="btn" data-set-commander="2"${isPartner ? ' disabled' : ''}>${isPartner ? 'Partner commander ✓' : 'Set as partner commander'}</button>` : '');
+}
+// A small square of the card's art, used as the player's picture (kept as data so it works offline).
+async function commanderArt(card) {
+  const faces = card.card_faces?.length ? card.card_faces : [card];
+  const src = card.image_uris?.art_crop || faces[0].image_uris?.art_crop
+    || (card.image_uris?.normal || faces[0].image_uris?.normal || '').replace('/normal/', '/art_crop/');
+  if (!src) return '';
+  try {
+    const blob = await (await fetch(src, { mode: 'cors' })).blob();
+    const bmp = await createImageBitmap(blob), size = 192, side = Math.min(bmp.width, bmp.height);
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    c.getContext('2d').drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, size, size);
+    return c.toDataURL('image/jpeg', 0.85);
+  } catch { return src; } // no data copy possible: use the picture's address (shown when online, then cached)
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-set-commander]'); if (!b || !ui.card || !ui.lookupFor) return;
+  b.disabled = true; b.textContent = 'Setting…';
+  const slot = Number(b.dataset.setCommander);
+  const art = slot === 1 ? await commanderArt(ui.card) : '';
+  parent.postMessage({ type: 'set-commander', playerId: ui.lookupFor.id, slot, name: ui.card.name, art }, location.origin);
+  if (slot === 1) ui.lookupFor.commander = ui.card.name; else ui.lookupFor.commander2 = ui.card.name;
+  stopCamera();
 });
 
 /* --- history (this device only) --- */
@@ -982,12 +1020,12 @@ renderHistory();
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(() => {});
 
 /* --- inside the life tracker --- */
-const EMBED = document.documentElement.classList.contains('embed');
 function closeLookup() { stopCamera(); parent.postMessage({ type: 'card-lookup-close' }, location.origin); }
 $('close-lookup').onclick = closeLookup;
 addEventListener('keydown', e => { if (EMBED && e.key === 'Escape' && !$('sheet').open) closeLookup(); });
 addEventListener('message', e => {
   if (e.origin !== location.origin) return;
+  if (e.data?.type === 'card-lookup-open' || e.data?.type === 'card-lookup-context') { ui.lookupFor = e.data.player || null; renderCommanderActions(); }
   if (e.data?.type === 'card-lookup-open') { setMode('scan'); setAuto(true); if (!ui.stream) startCamera(); }
   if (e.data?.type === 'card-lookup-hidden') stopCamera();
 });

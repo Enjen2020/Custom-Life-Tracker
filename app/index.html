@@ -266,6 +266,50 @@
   #table-grid .player-slot .player-tools{gap:0}
   #table-grid .player-slot .tool-btn{width:32px;height:32px}
 }
+
+/* Recommendations pass */
+/* #1 +/- hints sit in the corners of narrow life boxes so they never touch the total */
+@container (max-width:190px){
+  .life-mark{top:10px;transform:none;font-size:20px}.life-mark.minus{left:9px}.life-mark.plus{right:9px}
+  .life-mark.flash{animation:none}
+  .life-value{font-size:clamp(38px,22cqi,56px)}
+}
+/* #2 whose turn: a flag inside the life area, other seats dimmed a little */
+.turn-flag{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1;pointer-events:none;padding:4px 10px;border-radius:999px;background:var(--player-accent);color:#101114;font-size:12px;font-weight:850;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+@container (max-width:190px){.turn-flag{top:auto;bottom:8px;font-size:12px;padding:3px 8px}}
+.table-grid.turns-on .player-card:not(.is-active-turn):not(.eliminated)::after{content:"";position:absolute;inset:0;border-radius:inherit;background:#0a0b0d;opacity:.35;pointer-events:none;z-index:0}
+.table-grid.turns-on .player-card:not(.is-active-turn):not(.eliminated){border-color:color-mix(in srgb,var(--player-accent) 35%,#34363e)}
+[data-theme="light"] .table-grid.turns-on .player-card:not(.is-active-turn):not(.eliminated)::after{background:#9ea2ab;opacity:.22}
+.player-card.is-active-turn .your-turn{display:none} /* the flag in the life area says it now */
+/* #3 stronger player colors: clearer border and a tinted header strip */
+.player-card{border-color:color-mix(in srgb,var(--player-accent) 62%,#34363e)}
+.player-card .player-header{padding:4px 6px 4px 4px;border-radius:12px;background:color-mix(in srgb,var(--player-accent) 18%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--player-accent) 30%,transparent)}
+[data-theme="light"] .player-card:not(.bg-light){border-color:color-mix(in srgb,var(--player-accent) 70%,#d5d8de)}
+[data-theme="light"] .player-card .player-header{background:color-mix(in srgb,var(--player-accent) 20%,transparent)}
+/* #4 near-lethal warnings (color plus a word or "!" so it never relies on color alone) */
+.life-value.low{color:#f0c060}[data-theme="light"] .life-value.low,.bg-light .life-value.low{color:#8a5a00}
+.life-warn{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:1;pointer-events:none;font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#f0c060;white-space:nowrap}
+.life-warn.neg{color:var(--red)}[data-theme="light"] .life-warn,.bg-light .life-warn{color:#8a5a00}[data-theme="light"] .life-warn.neg,.bg-light .life-warn.neg{color:#b3383f}
+.player-card.is-active-turn .life-warn{bottom:auto;top:44px}
+@container (max-width:190px){.player-card.is-active-turn .life-warn{top:auto;bottom:34px}}
+.counter-badge.near-lethal{border-color:#f0c060;background:#f0c06024;color:#ffe2a3}
+[data-theme="light"] .counter-badge.near-lethal,.bg-light .counter-badge.near-lethal{border-color:#8a5a00;background:#f0c06033;color:#5a3a00}
+.warn-mark{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#f0c060;color:#101114;font-size:12px;font-weight:900;margin-left:2px}
+/* #5 player menu on a narrow card grows to cover the table, still turned toward that player */
+.player-slot.panel-expanded{position:fixed;z-index:45;border-radius:clamp(13px,2vw,21px);box-shadow:0 0 0 100vmax #040507b0}
+.player-slot.panel-expanded .card-tool-shell{font-size:1rem}
+/* #6 compact top bar on phones: clock and icons only */
+@media(max-width:560px){
+  .game-status .clock-label{display:none}
+  .start-timer-btn .btn-label,.pause-timer-btn span{display:none}
+  .start-timer-btn,.pause-timer-btn{width:40px;min-width:40px;padding:0;justify-content:center}
+  .game-topbar{gap:8px}
+}
+#table-grid .counter-badge .badge-symbol{font-size:12px}
+/* #8 commander name under the player name */
+.player-name{display:flex;flex-direction:column;min-width:0}.player-name .pn{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmdr-line{display:block;font-size:12px;font-weight:600;letter-spacing:0;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bg-light .cmdr-line{color:#4e515b}
 </style>
 </head>
 <body>
@@ -333,7 +377,7 @@
  </div></section>
 
 <section id="screen-game" class="screen"><div class="game-shell">
- <header class="game-topbar"><div class="game-brand">LIFE TRACKER</div><div class="game-status" id="game-status" aria-label="Total game time"><span class="paused-label hidden" id="paused-label">PAUSED</span><span class="clock-label">GAME TIME</span><span id="game-elapsed">00:00</span><button class="btn-primary btn-small start-timer-btn" id="start-timer-btn" data-action="open-start-timer"><svg><use href="#i-play"/></svg> Start Timer</button><button class="btn-secondary btn-small pause-timer-btn hidden" id="pause-timer-btn" data-action="toggle-pause" aria-label="Pause timers"><svg><use href="#i-pause"/></svg> <span>Pause</span></button></div><button class="icon-btn table-btn" id="table-undo-btn" data-action="undo" title="Undo the last table action" aria-label="Undo the last table action" disabled><svg><use href="#i-undo"/></svg></button><button class="icon-btn table-btn" data-action="table-menu" title="Table menu" aria-label="Table menu: game log, end game, main menu"><svg><use href="#i-ellipsis"/></svg></button></header>
+ <header class="game-topbar"><div class="game-brand">LIFE TRACKER</div><div class="game-status" id="game-status" aria-label="Total game time"><span class="paused-label hidden" id="paused-label">PAUSED</span><span class="clock-label">GAME TIME</span><span id="game-elapsed">00:00</span><button class="btn-primary btn-small start-timer-btn" id="start-timer-btn" data-action="open-start-timer" aria-label="Start timer"><svg><use href="#i-play"/></svg> <span class="btn-label">Start Timer</span></button><button class="btn-secondary btn-small pause-timer-btn hidden" id="pause-timer-btn" data-action="toggle-pause" aria-label="Pause timers"><svg><use href="#i-pause"/></svg> <span>Pause</span></button></div><button class="icon-btn table-btn" id="table-undo-btn" data-action="undo" title="Undo the last table action" aria-label="Undo the last table action" disabled><svg><use href="#i-undo"/></svg></button><button class="icon-btn table-btn" data-action="table-menu" title="Table menu" aria-label="Table menu: game log, end game, main menu"><svg><use href="#i-ellipsis"/></svg></button></header>
  <div id="table-grid" class="table-grid" aria-label="Player table"></div>
  </div></section>
 
@@ -392,7 +436,7 @@ function applyAccent(){document.documentElement.style.setProperty('--accent',ACC
 function showToast(message){/* Success popups stay off; state changes remain visible in the relevant card or panel. */}
 function notify(message,kind='error'){const t=$('#toast');if(!t)return;t.textContent=message;t.classList.toggle('error',kind==='error');t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),kind==='error'?3200:2400);}
 function showScreen(name){currentScreen=name;updateWakeLock();$$('.screen').forEach(s=>s.classList.toggle('active',s.id===`screen-${name}`));window.scrollTo?.(0,0);if(name==='menu')renderMenuMeta();if(name==='setup')renderSetup();if(name==='settings')renderSettings();if(name==='history')renderHistory();if(name==='game'&&store.currentGame)renderGame();if(name==='gameover')renderGameover();}
-function renderMenuMeta(){const quick=$('[data-action="quick-start"] .menu-subtitle');if(quick)quick.textContent=`Load last setup · ${store.lastSetup?.playerCount||4} players · ${store.lastSetup?.startingLife??40} life`;const hist=$('#menu-history-subtitle');if(hist){const n=(store.history||[]).length;hist.textContent=n?`${n} of 15 completed games saved`:'No completed games yet';}const nav=$('.menu');let resume=$('#resume-current-game-btn');if(store.currentGame){if(!resume){resume=document.createElement('button');resume.id='resume-current-game-btn';resume.className='menu-btn';resume.dataset.action='resume-current-game';resume.innerHTML=`<span class="icon-box" style="color:var(--green)">${icon('play')}</span><span class="menu-copy"><span class="menu-title">Resume Current Game</span><span class="menu-subtitle">${store.currentGame.players.length} players · Continue your active match</span></span>${icon('chevron','chevron')}`;nav.insertBefore(resume,nav.firstChild);}else resume.querySelector('.menu-subtitle').textContent=`${store.currentGame.players.length} players · Continue your active match`;}else if(resume)resume.remove();}
+function renderMenuMeta(){const quick=$('[data-action="quick-start"] .menu-subtitle');if(quick)quick.textContent=`Load last setup · ${store.lastSetup?.playerCount||4} players · ${store.lastSetup?.startingLife??40} life`;const hist=$('#menu-history-subtitle');if(hist){const n=(store.history||[]).length;hist.textContent=n?`${n} of 15 completed games saved`:'No completed games yet';}const nav=$('.menu');let resume=$('#resume-current-game-btn');$('.menu-btn[data-action="go-setup"]')?.classList.toggle('primary',!store.currentGame);if(store.currentGame){if(!resume){resume=document.createElement('button');resume.id='resume-current-game-btn';resume.className='menu-btn primary';resume.dataset.action='resume-current-game';resume.innerHTML=`<span class="icon-box" style="color:var(--green)">${icon('play')}</span><span class="menu-copy"><span class="menu-title">Resume Game</span><span class="menu-subtitle">${store.currentGame.players.length} players · pick up where you left off</span></span>${icon('chevron','chevron')}`;nav.insertBefore(resume,nav.firstChild);}else resume.querySelector('.menu-subtitle').textContent=`${store.currentGame.players.length} players · pick up where you left off`;}else if(resume)resume.remove();}
 function renderSetup(){const count=Number(setupDraft.playerCount)||4;$('#player-count-options').innerHTML=[2,3,4,5,6].map(n=>`<button class="count-option ${count===n?'selected':''}" data-action="choose-count" data-count="${n}" aria-pressed="${count===n}">${n}</button>`).join('');const input=$('#starting-life-input');if(input&&document.activeElement!==input)input.value=Number.isFinite(Number(setupDraft.startingLife))?setupDraft.startingLife:40;const layoutHolder=$('#layout-options');if(layoutHolder)layoutHolder.innerHTML=layoutOptionsMarkup(count,layoutFor(count,setupDraft.layouts?.[count]).id,'choose-layout');}
 function makePlayer(slot,life){const profile={...defaultProfile(slot),...(store.profiles?.[String(slot)]||{})};return {id:`p${slot}`,slot,name:profile.name||`Player ${slot}`,theme:profile.theme||defaultProfile(slot).theme,color:profile.color||'',avatar:profile.avatar||'',background:profile.background||'slate',rotation:profileRotation(profile),life:Number(life),eliminated:false,eliminationReason:null,partner:!!profile.partner,counters:{poison:0,experience:0,energy:0,rad:0,custom:[]},commanderDamage:{},commanderTax:0,commanderTax2:0};}
 function syncProfiles(players){store.profiles=store.profiles||{};players.forEach(p=>{store.profiles[String(p.slot)]={name:p.name,theme:p.theme,color:p.color||'',avatar:p.avatar,background:p.background,partner:!!p.partner};});}
@@ -466,16 +510,20 @@ function doChange(change,message,type='action',check=true){const g=currentGame()
 // Taps and holds are grouped: the total moves immediately, and one log entry / undo step is recorded after a short pause.
 const LIFE_COMMIT_DELAY=1400;
 function signed(n){return n>0?`+${n}`:n<0?`−${Math.abs(n)}`:'0';}
+// Near-lethal warnings: low life (a quarter of starting life or less), 15+ commander damage from one source, 7+ poison.
+function lowLifeLimit(){const g=currentGame();return Math.max(1,Math.ceil((Number(g?.startingLife)||40)*0.25));}
+function isLowLife(p){return p.life>=0&&p.life<=lowLifeLimit();}
+function lifeWarnMarkup(p){return p.life<0?'<span class="life-warn neg">Below zero</span>':isLowLife(p)?'<span class="life-warn">Low life</span>':'';}
 function lifeDeltaMarkup(p){const pend=pendingLife[p.id];return pend&&pend.delta?`<div class="life-delta ${pend.delta<0?'down':''}">${signed(pend.delta)}</div>`:'';}
-function paintLife(playerId){const p=getPlayer(playerId),ctrl=document.querySelector(`[data-life-control="${playerId}"]`);if(!p||!ctrl)return;const v=ctrl.querySelector('.life-value');if(v){v.textContent=p.life;v.classList.toggle('negative',p.life<0);}ctrl.setAttribute('aria-label',`Life total ${p.life}`);ctrl.querySelector('.life-delta')?.remove();ctrl.insertAdjacentHTML('beforeend',lifeDeltaMarkup(p));if(pendingLife[playerId]){const u=$('#table-undo-btn');if(u)u.disabled=false;}}
-function bumpLife(playerId,delta){const g=currentGame(),p=getPlayer(playerId);if(!g||!p)return;const pend=pendingLife[playerId]||(pendingLife[playerId]={before:p.life,delta:0,timer:null});p.life+=delta;pend.delta+=delta;clearTimeout(pend.timer);pend.timer=setTimeout(()=>{commitPendingLife(playerId);renderGame();},LIFE_COMMIT_DELAY);saveStore();paintLife(playerId);const mark=document.querySelector(`[data-life-control="${playerId}"] .life-mark.${delta<0?'minus':'plus'}`);if(mark){mark.classList.remove('flash');void mark.offsetWidth;mark.classList.add('flash');}}
+function paintLife(playerId){const p=getPlayer(playerId),ctrl=document.querySelector(`[data-life-control="${playerId}"]`);if(!p||!ctrl)return;const v=ctrl.querySelector('.life-value');if(v){v.textContent=p.life;v.classList.toggle('negative',p.life<0);v.classList.toggle('low',isLowLife(p));}ctrl.querySelector('.life-warn')?.remove();ctrl.insertAdjacentHTML('beforeend',lifeWarnMarkup(p));ctrl.setAttribute('aria-label',`Life total ${p.life}`);ctrl.querySelector('.life-delta')?.remove();ctrl.insertAdjacentHTML('beforeend',lifeDeltaMarkup(p));if(pendingLife[playerId]){const u=$('#table-undo-btn');if(u)u.disabled=false;}}
+function bumpLife(playerId,delta){const g=currentGame(),p=getPlayer(playerId);if(!g||!p)return;try{navigator.vibrate?.(Math.abs(delta)>=10?24:10);}catch(_){}const pend=pendingLife[playerId]||(pendingLife[playerId]={before:p.life,delta:0,timer:null});p.life+=delta;pend.delta+=delta;clearTimeout(pend.timer);pend.timer=setTimeout(()=>{commitPendingLife(playerId);renderGame();},LIFE_COMMIT_DELAY);saveStore();paintLife(playerId);const mark=document.querySelector(`[data-life-control="${playerId}"] .life-mark.${delta<0?'minus':'plus'}`);if(mark){mark.classList.remove('flash');void mark.offsetWidth;mark.classList.add('flash');}}
 function commitPendingLife(playerId){const pend=pendingLife[playerId];if(!pend)return false;clearTimeout(pend.timer);delete pendingLife[playerId];const p=getPlayer(playerId);if(!p||!pend.delta||p.life===pend.before)return true;const d=p.life-pend.before;pushFrame({description:`${signed(d)} life for ${p.name}`,changes:[{kind:'life',playerId,before:pend.before}],eventIds:[appendEvent(`${signed(d)} life for ${p.name} · ${pend.before} → ${p.life}`,'life',{playerId,lifeBefore:pend.before,lifeAfter:p.life})]});return true;}
 function flushPendingLife(){let any=false;Object.keys(pendingLife).forEach(id=>{if(commitPendingLife(id))any=true;});return any;}
 function setExactLife(playerId,value){const p=getPlayer(playerId);if(!p||!Number.isInteger(value))return;const message=`Set ${p.name}'s life total from ${p.life} to ${value}`;doChange({kind:'life',playerId,value},message,'life');}
 function changeCounter(playerId,key,delta,counterId=null){const p=getPlayer(playerId);if(!p)return;if(key==='commander'){return openCommanderDamagePicker(playerId);}if(key==='custom'){const c=p.counters.custom.find(c=>c.id===counterId);if(!c)return;const value=Math.max(0,(c.value||0)+delta);doChange({kind:'customCounter',playerId,counterId,value},`${delta>0?'+':''}${delta} ${c.name} counter${Math.abs(delta)===1?'':'s'} for ${p.name}`,'counter');return;}const label=COUNTER_META[key]?.label||key;const value=Math.max(0,(p.counters[key]||0)+delta);doChange({kind:'counter',playerId,counterKey:key,value},`${delta>0?'+':''}${delta} ${label} counter${Math.abs(delta)===1?'':'s'} for ${p.name}`,'counter');}
 // Commander damage is keyed by source: "p2" for a player's commander, "p2:2" for their partner commander.
 function sourceParts(key){const [id,n]=String(key||'').split(':');return {id,partner:n==='2'};}
-function commanderSourceName(source,partner){return partner?`${source.name} (partner)`:source.name;}
+function commanderSourceName(source,partner){const c=partner?source.commander2:source.commander;return c?`${source.name} (${c})`:partner?`${source.name} (partner)`:source.name;}
 function commanderSources(p){const g=currentGame();return (g?.players||[]).filter(q=>q.id!==p.id).flatMap(q=>q.partner?[{key:q.id,source:q,partner:false},{key:`${q.id}:2`,source:q,partner:true}]:[{key:q.id,source:q,partner:false}]);}
 function changeCommanderDamage(targetId,sourceKey,delta){const g=currentGame(),target=getPlayer(targetId),{id:sourceId,partner}=sourceParts(sourceKey),source=getPlayer(sourceId);if(!g||!target||!source)return;const beforeDamage=Number(target.commanderDamage[sourceKey]||0),value=Math.max(0,beforeDamage+delta),actual=value-beforeDamage;if(!actual)return;const beforeLife=target.life,from=commanderSourceName(source,partner);target.commanderDamage[sourceKey]=value;target.life-=actual;const message=`${signed(actual)} commander damage to ${target.name} from ${from} · life ${beforeLife} → ${target.life}`;const frame={description:`${signed(actual)} commander damage to ${target.name} from ${from}`,changes:[{kind:'commander',playerId:targetId,sourceId:sourceKey,before:beforeDamage},{kind:'life',playerId:targetId,before:beforeLife}],eventIds:[appendEvent(message,'commander',{playerId:target.id,sourceId:sourceKey,damage:actual,lifeBefore:beforeLife,lifeAfter:target.life})]};if(actual>0&&g.monarchPlayerId===target.id&&!source.eliminated){frame.changes.push({kind:'monarch',before:target.id});g.monarchPlayerId=source.id;frame.eventIds.push(appendEvent(`${source.name} became the Monarch after dealing commander damage to ${target.name}`,'monarch',{before:target.id,playerId:source.id,trigger:'commander-damage'}));}if(actual>0)checkEliminations(frame,targetId,['commander']);pushFrame(frame);renderGame();}
 function manualElimination(playerId){const p=getPlayer(playerId);if(!p)return;if(p.eliminated){notify(`${p.name} is already eliminated`);return;}p.eliminated=true;p.eliminationReason='manual';const frame={description:`Marked ${p.name} eliminated`,changes:[{playerId:p.id,kind:'elimination',before:false,beforeReason:null}],eventIds:[appendEvent(`${p.name} manually marked eliminated`,'elimination',{playerId:p.id})]};handleMonarchLeaving(frame,[p.id]);advanceIfCurrentEliminated(frame);pushFrame(frame);}
@@ -484,9 +532,9 @@ function restoreFrameChange(ch){if(ch.kind==='turn'){const g=currentGame();if(!g
 function undoLast(){const g=currentGame();if(!g)return;flushPendingLife();const frame=g.undoStack.pop();if(!frame){notify('Nothing to undo yet','info');return;}[...(frame.changes||[])].reverse().forEach(restoreFrameChange);(frame.eventIds||[]).forEach(id=>{const e=g.events.find(e=>e.id===id);if(e)e.undone=true;});appendEvent(`Undid ${frame.description}`,'undo');saveStore();renderGame();notify(`Undid: ${frame.description}`,'info');}
 function avatarMarkup(p){if(p.avatar)return `<div class="avatar" style="--player-accent:${playerAccent(p)}"><img src="${esc(p.avatar)}" alt=""/></div>`;return `<div class="avatar" style="--player-accent:${playerAccent(p)}">${esc((p.name||'?').trim().split(/\s+/).map(w=>w[0]||'').join('').slice(0,2).toUpperCase())||icon('user')}</div>`;}
 function miniAvatarMarkup(p){const initials=esc((p.name||'?').trim().split(/\s+/).map(w=>w[0]||'').join('').slice(0,2).toUpperCase())||'?';return `<span class="commander-source-avatar" style="--source-accent:${playerAccent(p)}">${p.avatar?`<img src="${esc(p.avatar)}" alt="">`:initials}</span>`;}
-function badgeMarkup(p){const out=[];Object.entries(COUNTER_META).forEach(([key,m])=>{const n=p.counters[key]||0;if(n>0)out.push(`<button class="counter-badge" data-action="counter-badge" data-player-id="${p.id}" data-counter="${key}" aria-label="${m.label}: ${n}"><span class="badge-symbol">${m.symbol}</span><span>${n}</span></button>`);});p.counters.custom.forEach(c=>{if((c.value||0)>0)out.push(`<button class="counter-badge" data-action="counter-badge" data-player-id="${p.id}" data-counter="custom" data-counter-id="${c.id}" aria-label="${esc(c.name)}: ${c.value}"><span class="badge-symbol">✦</span><span>${esc(c.name)} ${c.value}</span></button>`);});
+function badgeMarkup(p){const out=[];Object.entries(COUNTER_META).forEach(([key,m])=>{const n=p.counters[key]||0;if(n>0){const near=key==='poison'&&n>=7;out.push(`<button class="counter-badge${near?' near-lethal':''}" data-action="counter-badge" data-player-id="${p.id}" data-counter="${key}" aria-label="${m.label}: ${n}${near?`, ${10-n} from lethal`:''}"${near?` title="${10-n} poison from lethal"`:''}><span class="badge-symbol">${m.symbol}</span><span>${n}</span>${near?'<span class="warn-mark" aria-hidden="true">!</span>':''}</button>`);}});p.counters.custom.forEach(c=>{if((c.value||0)>0)out.push(`<button class="counter-badge" data-action="counter-badge" data-player-id="${p.id}" data-counter="custom" data-counter-id="${c.id}" aria-label="${esc(c.name)}: ${c.value}"><span class="badge-symbol">✦</span><span>${esc(c.name)} ${c.value}</span></button>`);});
  const g=currentGame();if(g?.monarchPlayerId===p.id)out.push(`<button class="counter-badge monarch-badge" data-action="monarch-picker" data-player-id="${p.id}" aria-label="${esc(p.name)} is the Monarch; change Monarch"><span class="badge-symbol">♛</span><span>Monarch</span></button>`);
- commanderSources(p).filter(s=>(Number(p.commanderDamage?.[s.key])||0)>0).forEach(s=>{const n=Number(p.commanderDamage[s.key])||0,from=esc(commanderSourceName(s.source,s.partner));out.push(`<button class="counter-badge commander-badge" data-action="commander-select" data-player-id="${p.id}" data-source-id="${s.key}" title="Commander damage from ${from}" aria-label="${n} commander damage from ${from}">${miniAvatarMarkup(s.source)}${s.partner?'<span class="partner-mark" style="--source-accent:'+playerAccent(s.source)+'">2</span>':''}<span>${n}</span></button>`);});
+ commanderSources(p).filter(s=>(Number(p.commanderDamage?.[s.key])||0)>0).forEach(s=>{const n=Number(p.commanderDamage[s.key])||0,from=esc(commanderSourceName(s.source,s.partner));const near=n>=15;out.push(`<button class="counter-badge commander-badge${near?' near-lethal':''}" data-action="commander-select" data-player-id="${p.id}" data-source-id="${s.key}" title="Commander damage from ${from}${near?` · ${21-n} from lethal`:''}" aria-label="${n} commander damage from ${from}${near?`, ${21-n} from lethal`:''}">${miniAvatarMarkup(s.source)}${s.partner?'<span class="partner-mark" style="--source-accent:'+playerAccent(s.source)+'">2</span>':''}<span>${n}</span>${near?'<span class="warn-mark" aria-hidden="true">!</span>':''}</button>`);});
  // The tax badge only appears once tax has been paid; it stays reachable from the player menu.
  const tax=Math.max(0,Number(p.commanderTax)||0),tax2=p.partner?Math.max(0,Number(p.commanderTax2)||0):0;if(tax||tax2){const shown=p.partner?`${tax}/${tax2}`:`${tax}`;out.push(`<button class="counter-badge tax-badge" data-action="commander-tax" data-player-id="${p.id}" title="Commander tax: ${shown} additional generic mana" aria-label="Commander tax ${shown} for ${esc(p.name)}"><span class="badge-symbol">TAX</span><span>${shown}</span></button>`);}
  // Most important first (commander damage, poison, Monarch); past five badges the rest fold into a "+N" button.
@@ -494,7 +542,13 @@ function badgeMarkup(p){const out=[];Object.entries(COUNTER_META).forEach(([key,
  if(out.length>5){const hidden=out.length-4;return out.slice(0,4).join('')+`<button class="counter-badge more-badge" data-action="manage-counters" data-player-id="${p.id}" aria-label="${hidden} more counters for ${esc(p.name)}">+${hidden}</button>`;}
  return out.join('');}
 function cardClass(p){return `player-card ${p.eliminated?'eliminated':''} bg-${['slate','mana','light','prism'].includes(p.background)?p.background:'slate'}`;}
-function fitRotatedCards(){$$('#table-grid .player-slot').forEach(slot=>{const card=slot.querySelector('.player-card');if(!card)return;const rotation=Number(slot.dataset.rotation||0);if(rotation===90||rotation===270){card.style.left='50%';card.style.top='50%';card.style.right='auto';card.style.bottom='auto';card.style.width=`${slot.clientHeight}px`;card.style.height=`${slot.clientWidth}px`;card.style.transform=`translate(-50%,-50%) rotate(${rotation}deg)`;}else{card.style.left='0';card.style.top='0';card.style.right='auto';card.style.bottom='auto';card.style.width='100%';card.style.height='100%';card.style.transform=`rotate(${rotation}deg)`;}});}
+function expandNarrowPanels(){const grid=$('#table-grid');if(!grid)return;const box=grid.getBoundingClientRect();
+ $$('#table-grid .player-slot').forEach(slot=>{const open=!!slot.querySelector('[data-card-panel-owner]');slot.classList.remove('panel-expanded');slot.style.removeProperty('--x');
+  if(!open)return;const rot=Number(slot.dataset.rotation||0),across=(rot===90||rot===270)?slot.clientHeight:slot.clientWidth,tall=(rot===90||rot===270)?slot.clientWidth:slot.clientHeight;
+  if(across>=260&&tall>=230)return; // roomy enough: keep the menu in the card
+  slot.classList.add('panel-expanded');Object.assign(slot.style,{top:box.top+'px',left:box.left+'px',width:box.width+'px',height:box.height+'px'});});
+ $$('#table-grid .player-slot:not(.panel-expanded)').forEach(slot=>{slot.style.top=slot.style.left=slot.style.width=slot.style.height='';});}
+function fitRotatedCards(){expandNarrowPanels();$$('#table-grid .player-slot').forEach(slot=>{const card=slot.querySelector('.player-card');if(!card)return;const rotation=Number(slot.dataset.rotation||0);if(rotation===90||rotation===270){card.style.left='50%';card.style.top='50%';card.style.right='auto';card.style.bottom='auto';card.style.width=`${slot.clientHeight}px`;card.style.height=`${slot.clientWidth}px`;card.style.transform=`translate(-50%,-50%) rotate(${rotation}deg)`;}else{card.style.left='0';card.style.top='0';card.style.right='auto';card.style.bottom='auto';card.style.width='100%';card.style.height='100%';card.style.transform=`rotate(${rotation}deg)`;}});}
 function cardPanelRoot(playerId){return document.querySelector(`[data-card-panel-owner="${playerId}"]`);}
 function setCardPanel(playerId,type,extra={}){if(!getPlayer(playerId))return;cardPanels[playerId]={type,...extra};renderGame();}
 function closeCardPanel(playerId){delete cardPanels[playerId];delete customizeDrafts[playerId];delete avatarDrafts[playerId];renderGame();}
@@ -569,9 +623,10 @@ const shell=$('#screen-game .game-shell');const viewState={shellTop:shell?.scrol
 $$('#table-grid [data-card-panel-owner]').forEach(panel=>{const body=panel.querySelector('[data-card-tool-body]');if(body){const key=`${panel.dataset.cardPanelOwner}:${panel.dataset.cardPanelType}`;cardToolScrollPositions[key]=body.scrollTop;}});
 // Keep whoever is typing in a card's form focused (with their cursor) when another player's action redraws the table.
 const focused=document.activeElement,focusState=focused&&focused.id&&focused.closest?.('#table-grid')?{id:focused.id,start:(()=>{try{return focused.selectionStart}catch(_){return null}})(),end:(()=>{try{return focused.selectionEnd}catch(_){return null}})()}:null;
-ensureTurnState(g);updateGameClocks();const undoBtn=$('#table-undo-btn');if(undoBtn)undoBtn.disabled=!(g.undoStack.length||Object.keys(pendingLife).length);const grid=$('#table-grid'),layout=gameLayout(g);grid.className=`table-grid layout-grid layout-${layout.id}`;grid.style.gridTemplateAreas=layout.areas.map(r=>`"${r}"`).join(' ');grid.style.gridTemplateColumns=layout.cols||`repeat(${layout.areas[0].split(' ').length},minmax(0,1fr))`;grid.style.gridTemplateRows=`repeat(${layout.areas.length},minmax(0,1fr))`;const seats=normalizedSeatOrder(g);const visualPlayers=seats.map(id=>g.players.find(p=>p.id===id)).filter(Boolean);grid.innerHTML=visualPlayers.map((p,seatIndex)=>{p.rotation=seatRotation(g,seatIndex);const seatArea=layout.seats[seatIndex]?.[0]||'auto';const active=!!g.timerStarted&&p.id===g.activePlayerId&&!p.eliminated;let cardContent='';
+ensureTurnState(g);updateGameClocks();const undoBtn=$('#table-undo-btn');if(undoBtn)undoBtn.disabled=!(g.undoStack.length||Object.keys(pendingLife).length);const grid=$('#table-grid'),layout=gameLayout(g);grid.className=`table-grid layout-grid layout-${layout.id}${g.timerStarted&&g.activePlayerId?' turns-on':''}`;grid.style.gridTemplateAreas=layout.areas.map(r=>`"${r}"`).join(' ');grid.style.gridTemplateColumns=layout.cols||`repeat(${layout.areas[0].split(' ').length},minmax(0,1fr))`;grid.style.gridTemplateRows=`repeat(${layout.areas.length},minmax(0,1fr))`;const seats=normalizedSeatOrder(g);const visualPlayers=seats.map(id=>g.players.find(p=>p.id===id)).filter(Boolean);grid.innerHTML=visualPlayers.map((p,seatIndex)=>{p.rotation=seatRotation(g,seatIndex);const seatArea=layout.seats[seatIndex]?.[0]||'auto';const active=!!g.timerStarted&&p.id===g.activePlayerId&&!p.eliminated;let cardContent='';
   // Cards carry only per-player controls; Undo, the log and End Game live in the top bar.
-  const header=`<header class="player-header">${avatarMarkup(p)}<div class="player-name" title="${esc(p.name)}">${esc(p.name)}</div><div class="player-header-spacer"></div><div class="player-tools">
+  const cmdrNames=[p.commander,p.partner?p.commander2:''].filter(Boolean);
+  const header=`<header class="player-header">${avatarMarkup(p)}<div class="player-name" title="${esc(p.name)}"><span class="pn">${esc(p.name)}</span>${cmdrNames.length?`<span class="cmdr-line" title="${esc(cmdrNames.join(' & '))}">${esc(cmdrNames.join(' & '))}</span>`:''}</div><div class="player-header-spacer"></div><div class="player-tools">
   <button class="tool-btn seat-drag-handle" data-action="drag-seat" data-player-id="${p.id}" title="Drag to swap seats" aria-label="Drag ${esc(p.name)} to swap seats">${icon('grip')}</button>
   <button class="tool-btn" data-action="player-menu" data-player-id="${p.id}" title="Player menu" aria-label="Player menu for ${esc(p.name)}">${icon('grid')}</button>
   </div></header>`;
@@ -582,7 +637,8 @@ ensureTurnState(g);updateGameClocks();const undoBtn=$('#table-undo-btn');if(undo
    <button class="life-zone left" data-life-zone="left" data-player-id="${p.id}" aria-label="Decrease ${esc(p.name)} life by one, hold to decrease by ten"></button>
    <button class="life-zone center" data-life-zone="center" data-player-id="${p.id}" aria-label="Set exact life total for ${esc(p.name)}"></button>
    <button class="life-zone right" data-life-zone="right" data-player-id="${p.id}" aria-label="Increase ${esc(p.name)} life by one, hold to increase by ten"></button>
-   <div class="life-value ${p.life<0?'negative':''}">${p.life}</div>${lifeDeltaMarkup(p)}
+   ${active?'<span class="turn-flag">Your turn</span>':''}
+   <div class="life-value ${p.life<0?'negative':''} ${isLowLife(p)?'low':''}">${p.life}</div>${lifeDeltaMarkup(p)}${lifeWarnMarkup(p)}
   </div>
   <div class="turn-row">${active?`<div class="turn-clock"><span class="your-turn">YOUR TURN</span> <span class="turn-time" data-turn-elapsed="${p.id}">${formatDuration(clockNow(g)-(g.turnStartedAt||clockNow(g)))}</span></div><button class="pass-turn-btn" data-action="pass-turn" data-player-id="${p.id}" aria-label="Pass turn from ${esc(p.name)}">Pass Turn ${icon('chevron')}</button>`:''}</div>
   <div class="counter-row">${badgeMarkup(p)}</div>`;return `<div class="player-slot rot-${p.rotation||0}" style="grid-area:${seatArea}" data-player-slot data-player-id="${p.id}" data-rotation="${p.rotation||0}"><article class="${cardClass(p)} ${active?'is-active-turn':''}" data-player-card="${p.id}" style="--player-accent:${playerAccent(p)}">${cardContent}</article></div>`;}).join('');if(focusState){const el=document.getElementById(focusState.id);if(el){el.focus({preventScroll:true});try{if(focusState.start!==null)el.setSelectionRange(focusState.start,focusState.end);}catch(_){}}}requestAnimationFrame(()=>{fitRotatedCards();if(shell)shell.scrollTop=viewState.shellTop;$$('#table-grid [data-card-panel-owner]').forEach(panel=>{const body=panel.querySelector('[data-card-tool-body]');if(body){const key=`${panel.dataset.cardPanelOwner}:${panel.dataset.cardPanelType}`;body.scrollTop=Number(cardToolScrollPositions[key]||0);}});window.scrollTo?.(viewState.windowX,viewState.windowY);requestAnimationFrame(()=>{if(shell)shell.scrollTop=viewState.shellTop;$$('#table-grid [data-card-panel-owner]').forEach(panel=>{const body=panel.querySelector('[data-card-tool-body]');if(body){const key=`${panel.dataset.cardPanelOwner}:${panel.dataset.cardPanelType}`;body.scrollTop=Number(cardToolScrollPositions[key]||0);}});window.scrollTo?.(viewState.windowX,viewState.windowY);});});updateGameClocks();}
@@ -718,16 +774,23 @@ applyTheme();applyAccent();renderMenuMeta();if(store.currentGame){showScreen('ga
 <script>
 /* Card lookup: the scanner (scanner/) opens full screen over the current screen and closes back to it.
    The game is never left, so life totals, timers and turns are untouched. */
-let lookupOpener=null;
+let lookupOpener=null,lookupPlayer=null,lastLookupLog={name:'',at:0};
+function lookupContext(){
+  // Which player opened the lookup (from their menu), so the scanner can offer "Set as commander".
+  const p=lookupPlayer&&currentScreen==='game'?getPlayer(lookupPlayer):null;
+  return p?{id:p.id,name:p.name,partner:!!p.partner,commander:p.commander||'',commander2:p.commander2||''}:null;
+}
 function openCardLookup(opener){
   const layer=document.getElementById('lookup-layer');
   lookupOpener=opener||document.activeElement;
+  lookupPlayer=opener?.dataset?.playerId||null;
   let frame=layer.querySelector('iframe');
   if(!frame){
     frame=document.createElement('iframe');
     frame.src='scanner/?embed=1';frame.title='Card lookup';frame.allow='camera';
+    frame.addEventListener('load',()=>frame.contentWindow?.postMessage({type:'card-lookup-context',player:lookupContext()},location.origin));
     layer.appendChild(frame);
-  }else frame.contentWindow?.postMessage({type:'card-lookup-open'},location.origin);
+  }else frame.contentWindow?.postMessage({type:'card-lookup-open',player:lookupContext()},location.origin);
   layer.hidden=false;document.body.style.overflow='hidden';
   setTimeout(()=>frame.focus(),50);
 }
@@ -738,7 +801,27 @@ function closeCardLookup(){
   if(lookupOpener&&document.contains(lookupOpener))lookupOpener.focus({preventScroll:true});
   lookupOpener=null;
 }
-addEventListener('message',e=>{if(e.origin===location.origin&&e.data?.type==='card-lookup-close')closeCardLookup();});
+function setCommanderFromLookup(d){
+  const p=getPlayer(d.playerId);if(!p||!currentGame())return;
+  if(d.slot===2)p.commander2=d.name;else{p.commander=d.name;if(d.art)p.avatar=d.art;}
+  appendEvent(`${p.name}'s ${d.slot===2?'partner commander':'commander'}: ${d.name}`,'system');saveStore();
+  closeCardLookup();if(cardPanels[p.id])closeCardPanel(p.id);else renderGame();
+}
+function logLookup(d){
+  // Lookups during a game go in the game log; flipping between printings of one card counts once.
+  if(currentScreen!=='game'||!currentGame())return;
+  if(d.name===lastLookupLog.name&&Date.now()-lastLookupLog.at<120000)return;
+  lastLookupLog={name:d.name,at:Date.now()};
+  const who=d.playerId&&getPlayer(d.playerId)?getPlayer(d.playerId).name:'Card lookup';
+  appendEvent(`${who} looked up ${d.name} · ${String(d.set||'').toUpperCase()} #${d.num}`,'lookup');saveStore();
+}
+addEventListener('message',e=>{
+  if(e.origin!==location.origin)return;
+  const t=e.data?.type;
+  if(t==='card-lookup-close')closeCardLookup();
+  else if(t==='set-commander')setCommanderFromLookup(e.data);
+  else if(t==='card-looked-up')logLookup(e.data);
+});
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('lookup-layer').hidden)closeCardLookup();});
 </script>
 </body>
