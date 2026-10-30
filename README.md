@@ -2,7 +2,7 @@
 
 A shared-table Magic: The Gathering life tracker for 2–6 players, with built-in card lookup: scan a card with the camera (or search by name) to see its Oracle text, rulings, Commander details, printings and prices. Works offline once installed.
 
-**Live app:** https://enjen2020.github.io/Oracle-Scanner/
+**Live app:** https://enjen2020.github.io/Custom-Life-Tracker/
 
 Card data, images, prices and rulings come from [Scryfall](https://scryfall.com).
 
