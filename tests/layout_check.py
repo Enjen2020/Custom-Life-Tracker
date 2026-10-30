@@ -8,7 +8,7 @@ covered by the center button. Also fails on any JavaScript error.
     pip install playwright && python -m playwright install chromium
     python tests/layout_check.py            # checks the app/ folder
 """
-import asyncio, functools, http.server, sys, threading
+import asyncio, functools, http.server, os, sys, threading
 from pathlib import Path
 from playwright.async_api import async_playwright
 
@@ -91,6 +91,9 @@ async def main():
     for pr in problems:
         print(pr)
     print(f'{len(problems)} layout problems, {len(set(errors))} JavaScript errors')
+    if os.environ.get('GITHUB_ACTIONS'):  # show the first few on the run's summary page
+        for line in (['JavaScript error: ' + e for e in sorted(set(errors))] + problems)[:10]:
+            print('::error::' + line.replace('\n', ' '))
     sys.exit(1 if problems or errors else 0)
 
 
