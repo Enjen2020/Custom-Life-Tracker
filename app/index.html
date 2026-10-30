@@ -666,7 +666,9 @@ function placeHub(){const hub=$('#table-hub'),grid=$('#table-grid'),shell=$('#sc
  let y=cy,bestY=Infinity;rects.forEach(a=>rects.forEach(b=>{if(b.top>a.bottom-1&&b.top-a.bottom<30&&Math.min(a.right,b.right)-Math.max(a.left,b.left)>20){const m=(a.bottom+b.top)/2;if(Math.abs(m-cy)<bestY){bestY=Math.abs(m-cy);y=m;}}}));
  // a column boundary that exists at that height
  let x=cx,bestX=Infinity;rects.forEach(a=>rects.forEach(b=>{if(b.left>a.right-1&&b.left-a.right<30&&a.top<y+40&&a.bottom>y-40&&b.top<y+40&&b.bottom>y-40){const m=(a.right+b.left)/2;if(Math.abs(m-cx)<bestX){bestX=Math.abs(m-cx);x=m;}}}));
- if(bestX===Infinity)x=cx;
+ // Use a seam only when one runs close to the middle (e.g. 2 or 4 columns); with 3 columns the true center
+ // sits over the middle cards' name bars, which have room, and keeps the hub centered on the table.
+ if(bestX===Infinity||bestX>gb.width*0.08)x=cx;
  // Stack Undo above the clock button when the cards around the hub are turned sideways, so the hub
  // reaches along their edge instead of deep into them.
  const near=slots.filter((sl,i)=>{const r=rects[i];return r.left<x+40&&r.right>x-40&&r.top<y+40&&r.bottom>y-40;});
