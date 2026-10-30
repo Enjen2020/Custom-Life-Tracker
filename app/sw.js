@@ -1,13 +1,13 @@
 // Offline support for the installed app: the life tracker (this folder) and card lookup (scanner/).
 // Pages are fetched network-first, so a new upload is picked up the next time the app opens online,
 // and fall back to the saved copy with no connection. Card data is saved by the scanner page itself.
-const SHELL = 'shell-v5';
+const SHELL = 'shell-v6';
 const RUNTIME = 'runtime-v1';
 const IMAGES = 'images-v1';
 const MAX_IMAGES = 3000; // card pictures and Printings thumbnails, roughly 120 MB
 
 const APP_FILES = [
-  './', './index.html', './manifest.webmanifest',
+  './', './index.html', './styles.css', './app.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png', './icons/favicon-32.png',
   './scanner/', './scanner/index.html',

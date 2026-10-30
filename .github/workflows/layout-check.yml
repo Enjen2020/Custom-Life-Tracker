@@ -1,0 +1,26 @@
+# Checks that no card's buttons, timer or badges are cut off in any table layout or screen size,
+# and that the app runs without JavaScript errors. Runs whenever the app changes.
+name: Layout check
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/**", "tests/**"]
+  pull_request:
+    paths: ["app/**", "tests/**"]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install a test browser
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Check every layout
+        run: python tests/layout_check.py app
