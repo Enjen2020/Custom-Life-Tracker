@@ -1,9 +1,9 @@
 /* Oracle Scanner service worker: keeps the app, the text reader, fonts and viewed card
    images available offline. Card data itself is saved by the app (IndexedDB), not here. */
-const SHELL = 'shell-v3';
+const SHELL = 'shell-v4';
 const RUNTIME = 'runtime-v1';
 const IMAGES = 'images-v1';
-const MAX_IMAGES = 1500; // roughly 100 MB of card pictures
+const MAX_IMAGES = 3000; // full pictures and Printings thumbnails, roughly 120 MB
 
 const SHELL_FILES = [
   './', 'index.html', 'manifest.webmanifest',

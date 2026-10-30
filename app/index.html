@@ -143,6 +143,14 @@ main{max-width:1120px;margin:0 auto;padding-block:16px 32px;padding-left:max(16p
 .pnote{font-size:.82rem;color:var(--muted)}
 .pnote b{color:var(--text);font-weight:600}
 
+.prints{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity;scrollbar-width:thin}
+.pv{flex:none;width:112px;display:flex;flex-direction:column;gap:3px;text-align:left;border:0;background:none;padding:0;scroll-snap-align:start}
+.pv img{width:112px;aspect-ratio:146/204;border-radius:5px;background:var(--s1);object-fit:cover;outline:2px solid transparent;outline-offset:2px}
+.pv[aria-current="true"] img{outline-color:var(--gold)}
+.pv-set{font:600 .78rem var(--f-ui);letter-spacing:.04em;margin-top:4px}
+.pv-tr{font-size:.72rem;color:var(--muted);line-height:1.3;min-height:1.3em}
+.pv-price{font:700 .95rem var(--f-display);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.pv[aria-current="true"] .pv-set{color:var(--gold)}
 section.block{display:flex;flex-direction:column;gap:10px}
 section.block > h3{margin:0;font:600 .72rem var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:10px}
 section.block > h3::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -311,7 +319,7 @@ const CardData = (() => {
   function use(d) { data = d; idx = buildIndex(d); }
 
   function toCard(p) {
-    const [id, set, num, oid, lang, rar, back, printed, url] = p, o = data.oracle[oid];
+    const [id, set, num, oid, lang, rar, back, printed, url, tr] = p, o = data.oracle[oid];
     const img = side => `https://cards.scryfall.io/normal/${side}/${id[0]}/${id[1]}/${id}.jpg`;
     const front = url || img('front');
     const face = f => ({ name: f.n, mana_cost: f.m, type_line: f.t, oracle_text: f.o, power: f.p, toughness: f.tg, loyalty: f.l, defense: f.d });
@@ -321,7 +329,7 @@ const CardData = (() => {
       legalities: Object.fromEntries(data.formats.map((k, i) => [k, LEGAL[o.g[i]] || 'not_legal'])),
       scryfall_uri: `https://scryfall.com/card/${set}/${encodeURIComponent(num)}`,
       color_identity: (o.ci || '').split('').filter(Boolean), game_changer: !!o.gc,
-      prices: priceObj(prices?.p[id]), _cheapest: cheapest(oid), _pricesDate: prices?.date,
+      prices: priceObj(prices?.p[id]), _cheapest: cheapest(oid), _pricesDate: prices?.date, _tr: tr || '',
       _rulings: (o.r || []).map(([published_at, source, comment]) => ({ published_at, source, comment }))
     };
     if (o.f) {
@@ -345,6 +353,17 @@ const CardData = (() => {
       });
     }
     return best;
+  }
+  // Every printing of a card, newest set first, for the Printings picker.
+  function printingsOf(oid) {
+    const dates = data.set_dates || {};
+    return (idx.byOracle.get(oid) || []).map(p => {
+      const [id, set, num, , lang, , , , url, tr] = p, pr = prices?.p[id] || [];
+      const big = url || `https://cards.scryfall.io/normal/front/${id[0]}/${id[1]}/${id}.jpg`;
+      return { id, set, num, lang, tr: tr || '', date: dates[set] || '', setName: data.sets[set] || set.toUpperCase(),
+               thumb: big.replace('/normal/', '/small/'), price: pr[0] ?? null, foil: pr[1] ?? null, etched: pr[2] ?? null };
+    }).sort((a, b) => b.date.localeCompare(a.date) || (a.lang === 'en' ? -1 : 0) - (b.lang === 'en' ? -1 : 0)
+      || a.num.localeCompare(b.num, undefined, { numeric: true }));
   }
   const printFor = oid => idx.byId.get(data.oracle[oid].pr) || idx.anyPrint.get(oid);
 
@@ -422,6 +441,7 @@ const CardData = (() => {
     exact(name) { const n = norm(name), hit = idx.names.find(x => x[0] === n); return hit ? toCard(printFor(hit[1])) : null; },
     bySetNumber(set, num) { const p = idx.bySetNum.get(set.toLowerCase() + '|' + num); return p ? toCard(p) : null; },
     byId(id) { const p = idx.byId.get(id); return p ? toCard(p) : null; },
+    printingsOf(oid) { return idx?.byOracle.has(oid) ? printingsOf(oid) : null; },
     autocomplete(q) {
       const n = norm(q), starts = [], has = [], seen = new Set();
       for (const [nm, , display] of idx.names) {
@@ -434,6 +454,15 @@ const CardData = (() => {
     }
   };
 })();
+
+// Special-version flags for a live Scryfall card, same letters as the saved data uses.
+function treatmentsOf(c) {
+  if (c._tr != null) return c._tr;
+  const fx = c.frame_effects || [];
+  return (c.border_color === 'borderless' ? 'b' : '') + (fx.includes('extendedart') ? 'e' : '') + (fx.includes('showcase') ? 's' : '')
+    + (c.full_art ? 'f' : '') + (['1993', '1997'].includes(c.frame) ? 'r' : '') + (c.promo ? 'p' : '') + (c.textless ? 't' : '')
+    + ((c.promo_types || []).includes('serialized') ? 'n' : '');
+}
 
 /* ===== CardScanner core: no DOM, easy to lift into the life tracker later.
    Uses the saved card data first and Scryfall's live API only as a fallback. ===== */
@@ -474,6 +503,18 @@ const CardScanner = (() => {
     autocomplete: async q => CardData.ready ? CardData.autocomplete(q)
       : sf('/cards/autocomplete?q=' + encodeURIComponent(q)).then(r => r.data || []),
     rulings: async card => card._rulings || sf(card.rulings_uri).then(r => r.data || []),
+    async printings(card) {
+      const local = CardData.ready && CardData.printingsOf(card.oracle_id);
+      if (local) return local;
+      if (!card.prints_search_uri) return [];
+      const r = await sf(card.prints_search_uri);
+      return (r.data || []).map(c => {
+        const img = c.image_uris || c.card_faces?.[0]?.image_uris || {}, pr = c.prices || {};
+        const num = v => v == null ? null : Number(v);
+        return { id: c.id, set: c.set, num: c.collector_number, lang: c.lang, tr: treatmentsOf(c), date: c.released_at || '',
+                 setName: c.set_name, thumb: img.small, price: num(pr.usd), foil: num(pr.usd_foil), etched: num(pr.usd_etched) };
+      });
+    },
     // Foreign printed names (e.g. Japanese). Online only. Returns the first matching printing, or throws 404.
     foreignName: name => sf('/cards/search?include_multilingual=true&q=' + encodeURIComponent(`${name} lang:any`)).then(r => r.data[0]),
 
@@ -621,7 +662,7 @@ async function scanOnce(manual = false) {
   ui.busy = true; viewport.classList.add('reading');
   try {
     // 1) English name in the top bar
-    let card = null;
+    let card = null, foundByCode = false;
     const nameCanvas = grabBand(band); if (!nameCanvas) return;
     const name = await CardScanner.readName(nameCanvas);
     if (name && (manual || name !== ui.lastTried)) {
@@ -638,21 +679,37 @@ async function scanOnce(manual = false) {
         ui.lastCode = key;
         setStatus(`Read ${set} #${num}. Looking it up…`, 'busy');
         card = await CardScanner.bySetNumber(set, num).catch(e => { if (e.status !== 404) throw e; return null; });
-        if (card) break;
+        if (card) { foundByCode = true; break; }
       }
     }
+    let exact = false;
+    if (card && !foundByCode) ({ card, exact } = await refinePrinting(card));
+    else if (card) exact = true;
     if (!card) {
       setStatus(manual ? 'Couldn\'t match this card. Line up the name or the corner code, and add light.'
         : 'Scanning… line up the name, or the corner code on non-English cards.', manual ? 'warn' : '');
       return;
     }
     navigator.vibrate?.(40);
-    setStatus(`Found ${card.name}.`, 'ok');
+    setStatus(exact ? `Found ${card.name} · ${card.set.toUpperCase()} #${card.collector_number}.`
+      : `Found ${card.name}. If the art differs, pick your version under Printings.`, 'ok');
     setAuto(false); // pause until "Scan another"
     showCard(card, { scroll: true });
   } catch (e) {
     setStatus('Lookup failed: ' + e.message, 'error');
   } finally { ui.busy = false; viewport.classList.remove('reading'); }
+}
+// The name is the same on every version of a card; the corner code (set + number) tells them apart.
+async function refinePrinting(card) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt) await new Promise(r => setTimeout(r, 250));
+    const canvas = grabBand($('codeband')); if (!canvas) break;
+    for (const { set, num } of await CardScanner.readCode(canvas)) {
+      const hit = await CardScanner.bySetNumber(set, num).catch(() => null);
+      if (hit && hit.oracle_id === card.oracle_id) return { card: hit, exact: true };
+    }
+  }
+  return { card, exact: false };
 }
 function scheduleAuto() {
   clearTimeout(ui.timer);
@@ -668,6 +725,8 @@ const FORMATS = [['standard', 'Standard'], ['pioneer', 'Pioneer'], ['modern', 'M
 const LANGS = { ja: 'Japanese', ko: 'Korean', zhs: 'Simplified Chinese', zht: 'Traditional Chinese', ru: 'Russian',
   de: 'German', fr: 'French', it: 'Italian', es: 'Spanish', pt: 'Portuguese', ph: 'Phyrexian' };
 const STATUS = { legal: 'Legal', not_legal: 'No', banned: 'Banned', restricted: 'Restr.' };
+const TREATMENTS = { b: 'Borderless', e: 'Extended art', s: 'Showcase', f: 'Full art', r: 'Old frame', p: 'Promo', t: 'Textless', n: 'Serialized' };
+const trLabels = tr => [...(tr || '')].map(k => TREATMENTS[k]).filter(Boolean);
 const usd = v => v == null ? null : '$' + Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function faceHTML(f, card) {
@@ -718,6 +777,7 @@ async function showCard(card, { example = false, scroll = false } = {}) {
   const leg = card.legalities || {};
   const foreign = card.lang && card.lang !== 'en';
   const printedName = card.printed_name || faces.map(f => f.printed_name).filter(Boolean).join(' // ');
+  $('result').dataset.id = card.id;
   $('result').innerHTML = `
     <div class="hero">
       <div class="art">
@@ -731,12 +791,13 @@ async function showCard(card, { example = false, scroll = false } = {}) {
       </div>
     </div>
     ${pricesHTML(card)}
+    <section class="block" id="printings-block" hidden><h3 id="printings-title">Printings</h3><div class="prints" id="printings"></div></section>
     ${commanderHTML(card, faces)}
     <section class="block"><h3>Legality</h3>
       <div class="legal">${FORMATS.map(([k, n]) => `<div><span>${n}</span><span class="s-${leg[k] || 'not_legal'}">${STATUS[leg[k]] || 'No'}</span></div>`).join('')}</div>
     </section>
     <section class="block"><h3>Rulings</h3><div id="rulings"><p class="empty">Loading rulings…</p></div></section>
-    <div class="meta"><span>${esc(card.set_name)} · ${esc(card.set?.toUpperCase())} #${esc(card.collector_number)}</span><span style="text-transform:capitalize">${esc(card.rarity)}</span>
+    <div class="meta"><span>${esc(card.set_name)} · ${esc(card.set?.toUpperCase())} #${esc(card.collector_number)}</span><span style="text-transform:capitalize">${esc(card.rarity)}</span>${trLabels(treatmentsOf(card)).map(t => `<span>${t}</span>`).join('')}
       <a href="${esc(card.scryfall_uri)}" target="_blank" rel="noopener">Open on Scryfall ↗</a></div>
     ${ui.mode === 'scan' && !example ? '<button class="btn primary again" id="again"><svg class="ico"><use href="#i-cam"/></svg>Scan another card</button>' : ''}`;
 
@@ -748,6 +809,7 @@ async function showCard(card, { example = false, scroll = false } = {}) {
   if (!example) remember(card);
   if (scroll && matchMedia('(max-width:860px)').matches) $('result').scrollIntoView({ behavior: 'smooth' });
 
+  loadPrintings(card);
   try {
     const rulings = await CardScanner.rulings(card);
     $('rulings').innerHTML = rulings.length ? rulings.map(r => `
@@ -755,6 +817,31 @@ async function showCard(card, { example = false, scroll = false } = {}) {
       <p>${symbols(r.comment)}</p></div>`).join('') : '<p class="empty">No official rulings for this card.</p>';
   } catch { $('rulings').innerHTML = '<p class="empty">Rulings aren\'t available offline for this card yet.</p>'; }
 }
+
+async function loadPrintings(card) {
+  let list = [];
+  try { list = await CardScanner.printings(card); } catch {}
+  if (!$('printings') || $('result').dataset.id !== card.id) return; // another card was opened meanwhile
+  if (list.length < 2) return;
+  $('printings-block').hidden = false;
+  $('printings-title').textContent = `Printings · ${list.length}`;
+  $('printings').innerHTML = list.map(v => {
+    const price = v.price ?? v.foil ?? v.etched;
+    const finish = v.price == null && v.foil != null ? ' foil' : v.price == null && v.etched != null ? ' etched' : '';
+    const tags = [...trLabels(v.tr), v.lang !== 'en' ? (LANGS[v.lang] || v.lang.toUpperCase()) : ''].filter(Boolean).join(' · ');
+    return `<button class="pv" data-id="${esc(v.id)}"${v.id === card.id ? ' aria-current="true"' : ''}>
+      <img loading="lazy" src="${esc(v.thumb || '')}" alt="">
+      <span class="pv-set">${esc(v.set.toUpperCase())} #${esc(v.num)}</span>
+      <span class="pv-tr">${esc(tags) || '&nbsp;'}</span>
+      <span class="pv-price">${price == null ? '—' : usd(price) + finish}</span>
+    </button>`;
+  }).join('');
+  $('printings').querySelector('[aria-current]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('.pv'); if (!b || b.getAttribute('aria-current')) return;
+  try { showCard(await CardScanner.byId(b.dataset.id)); } catch (err) { setStatus('Lookup failed: ' + err.message, 'error'); }
+});
 
 /* --- history (this device only) --- */
 function loadHistory() { try { return JSON.parse(localStorage.getItem('oracle-history') || '[]'); } catch { return []; } }

@@ -113,7 +113,7 @@ def build(oracle_src, rulings_src, default_src):
             entry["r"] = sorted(rulings[oid])
         oracle[oid] = entry
 
-    sets, prints, prices = {}, [], {}
+    sets, set_dates, prints, prices = {}, {}, [], {}
     for c in stream(default_src):
         if c.get("layout") in SKIP_LAYOUTS:
             continue
@@ -121,18 +121,36 @@ def build(oracle_src, rulings_src, default_src):
         if oid not in oracle:
             continue
         sets[c["set"]] = c.get("set_name", c["set"].upper())
+        if c.get("released_at") and (c["set"] not in set_dates or c["released_at"] < set_dates[c["set"]]):
+            set_dates[c["set"]] = c["released_at"]
         back, url = image_info(c)
         printed = c.get("printed_name") or " // ".join(f["printed_name"] for f in c.get("card_faces") or [] if f.get("printed_name"))
-        # [id, set, number, oracle_id, lang, rarity, has_back_image, printed_name, image_url]
+        # [id, set, number, oracle_id, lang, rarity, has_back_image, printed_name, image_url, treatments]
         prints.append([c["id"], c["set"], c["collector_number"], oid, c.get("lang", "en"),
-                       RARITY_CODE.get(c.get("rarity"), "c"), back, printed or 0, url or 0])
+                       RARITY_CODE.get(c.get("rarity"), "c"), back, printed or 0, url or 0, treatments(c) or 0])
         pr = c.get("prices") or {}
         usd = [to_price(pr.get(k)) for k in ("usd", "usd_foil", "usd_etched")]
         if any(v is not None for v in usd):
             prices[c["id"]] = usd  # [normal, foil, etched] in US dollars
 
     prints.sort(key=lambda p: p[0])  # stable order, so unchanged data gives an unchanged version
-    return {"formats": FORMATS, "sets": sets, "oracle": oracle, "prints": prints}, prices
+    return {"formats": FORMATS, "sets": sets, "set_dates": set_dates, "oracle": oracle, "prints": prints}, prices
+
+
+def treatments(c):
+    """Special-version flags, one letter each: b borderless, e extended art, s showcase, f full art,
+    r old frame, p promo, t textless, n serialized."""
+    fx = set(c.get("frame_effects") or [])
+    out = ""
+    if c.get("border_color") == "borderless": out += "b"
+    if "extendedart" in fx: out += "e"
+    if "showcase" in fx: out += "s"
+    if c.get("full_art"): out += "f"
+    if c.get("frame") in ("1993", "1997"): out += "r"
+    if c.get("promo"): out += "p"
+    if c.get("textless"): out += "t"
+    if "serialized" in (c.get("promo_types") or []): out += "n"
+    return out
 
 
 def to_price(v):
