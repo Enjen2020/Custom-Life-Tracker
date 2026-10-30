@@ -36,8 +36,3 @@ Open the live address, then:
 - **Android (Chrome):** menu (⋮) → **Add to Home screen** or **Install app**.
 
 Open it once while online and open Card Lookup once, so it can save the card data. After that it works without a connection.
-
-## If something goes wrong
-
-- **Red X on the Actions tab:** click the failed run to see which step broke, then run it again with **Run workflow**. Scryfall is occasionally down for a few minutes.
-- **GitHub pauses daily runs** on repositories with no activity for 60 days and sends you an email. Click the link in the email (or **Enable workflow** on the Actions tab) to turn it back on.
