@@ -4,7 +4,9 @@ A shared-table Magic: The Gathering life tracker for 2–6 players, with built-i
 
 **Live app:** https://enjen2020.github.io/Oracle-Scanner/
 
-Card data, images, prices and rulings come from [Scryfall](https://scryfall.com). Not affiliated with Wizards of the Coast.
+Card data, images, prices and rulings come from [Scryfall](https://scryfall.com).
+
+Life Tracker is unofficial Fan Content permitted under the [Fan Content Policy](https://company.wizards.com/en/legal/fancontentpolicy). Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.
 
 ## How it works
 

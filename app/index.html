@@ -385,6 +385,10 @@
   .dialog-body{padding:12px 16px}
 }
 #table-grid .player-slot.rot-90 .player-name,#table-grid .player-slot.rot-270 .player-name{font-size:13px}
+footer{flex-direction:column;align-items:center;gap:6px}
+.fan-notice{margin:0;max-width:62ch;font-size:12px;line-height:1.5;color:var(--muted);text-align:center}
+.fan-notice a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.page-shell>.fan-notice{text-align:left;max-width:none}
 </style>
 </head>
 <body>
@@ -436,7 +440,7 @@
     <button class="menu-btn" data-action="help"><span class="icon-box" style="color:var(--green)"><svg><use href="#i-book"/></svg></span><span class="menu-copy"><span class="menu-title">Help</span><span class="menu-subtitle">How to use every feature</span></span><svg class="chevron"><use href="#i-chevron"/></svg></button>
    </nav>
   </main>
-  <div class="bottom-meta"><span>2–6 players · Table-ready design</span><span class="ready"><span class="ready-dot"></span>Ready to play</span></div><footer>Works offline · No account required</footer>
+  <div class="bottom-meta"><span>2–6 players · Table-ready design</span><span class="ready"><span class="ready-dot"></span>Ready to play</span></div><footer><span>Works offline · No account required</span><p class="fan-notice">Life Tracker is unofficial Fan Content permitted under the <a href="https://company.wizards.com/en/legal/fancontentpolicy" target="_blank" rel="noopener">Fan Content Policy</a>. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC. Card data and images from <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>.</p></footer>
  </div>
 </section>
 
@@ -483,7 +487,7 @@
   <div class="help-item"><div class="help-icon"><svg><use href="#i-grip"/></svg></div><div><strong>Seats and layout</strong><p>Drag a card by its handle (the six dots) onto another seat to swap players; the card turns to face its new edge. Change the whole table layout any time from the center button's <b>Table Layout</b>.</p></div></div>
   <div class="help-item"><div class="help-icon"><svg><use href="#i-history"/></svg></div><div><strong>Game log and history</strong><p>Every life change, counter, commander damage, dice roll, elimination and card lookup is recorded in the <b>Game Log</b> (center button). To finish, open the center button, tap <b>End Game</b> and choose the winner or Draw. Your last 15 games are kept in <b>Game History</b> on the main menu.</p></div></div>
   <div class="help-item"><div class="help-icon"><svg><use href="#i-settings"/></svg></div><div><strong>Settings and offline use</strong><p>Switch light or dark mode from the main menu. <b>Settings</b> has the accent color and Keep screen awake (on by default). Add the app to your home screen to use it like an app; it works without internet, including card lookup once the card data has been saved.</p></div></div>
- </div></div><button class="btn-secondary" data-action="main-menu" style="align-self:flex-start">Back to Main Menu</button>
+ </div></div><p class="fan-notice">Life Tracker is unofficial Fan Content permitted under the <a href="https://company.wizards.com/en/legal/fancontentpolicy" target="_blank" rel="noopener">Fan Content Policy</a>. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC. Card data, prices, images and rulings from <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>.</p><button class="btn-secondary" data-action="main-menu" style="align-self:flex-start">Back to Main Menu</button>
  </div></section>
 
 <section id="screen-history" class="screen"><div class="page-shell">
