@@ -844,9 +844,16 @@ document.addEventListener('click', async e => {
 });
 
 /* --- history (this device only) --- */
-function loadHistory() { try { return JSON.parse(localStorage.getItem('oracle-history') || '[]'); } catch { return []; } }
+// One entry per card (not per printing); it keeps the printing you looked at last.
+// Name is the key, so entries saved before this change also merge.
+function loadHistory() {
+  let h = [];
+  try { h = JSON.parse(localStorage.getItem('oracle-history') || '[]'); } catch {}
+  const seen = new Set();
+  return h.filter(x => x && x.name && !seen.has(x.name) && seen.add(x.name));
+}
 function remember(card) {
-  const h = [{ id: card.id, name: card.name }, ...loadHistory().filter(x => x.id !== card.id)].slice(0, 12);
+  const h = [{ id: card.id, name: card.name }, ...loadHistory().filter(x => x.name !== card.name)].slice(0, 12);
   try { localStorage.setItem('oracle-history', JSON.stringify(h)); } catch {}
   renderHistory();
 }
