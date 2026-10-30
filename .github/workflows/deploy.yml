@@ -1,4 +1,4 @@
-# Rebuilds the offline card data from Scryfall and publishes the app to GitHub Pages.
+# Rebuilds the offline card data from Scryfall and publishes the app (life tracker + card lookup) to GitHub Pages.
 # Runs every day, whenever you change a file in the repository, and when you press
 # "Run workflow" on the Actions tab.
 name: Update cards and publish
@@ -36,21 +36,21 @@ jobs:
 
       - name: Download the text reader for offline use
         run: |
-          mkdir -p /tmp/pkgs site/vendor/core site/vendor/lang
+          mkdir -p /tmp/pkgs site/scanner/vendor/core site/scanner/vendor/lang
           cd /tmp/pkgs
           npm pack tesseract.js@5.1.1 tesseract.js-core@5.1.1 @tesseract.js-data/eng
           for f in *.tgz; do mkdir -p "${f%.tgz}"; tar xzf "$f" -C "${f%.tgz}"; done
-          cp tesseract.js-5.1.1/package/dist/tesseract.min.js tesseract.js-5.1.1/package/dist/worker.min.js "$GITHUB_WORKSPACE/site/vendor/"
-          cp tesseract.js-core-5.1.1/package/tesseract-core* "$GITHUB_WORKSPACE/site/vendor/core/"
+          cp tesseract.js-5.1.1/package/dist/tesseract.min.js tesseract.js-5.1.1/package/dist/worker.min.js "$GITHUB_WORKSPACE/site/scanner/vendor/"
+          cp tesseract.js-core-5.1.1/package/tesseract-core* "$GITHUB_WORKSPACE/site/scanner/vendor/core/"
           LANG_FILE=$(find . -path '*eng*' -name 'eng.traineddata.gz' | grep best_int | head -n 1)
           [ -z "$LANG_FILE" ] && LANG_FILE=$(find . -name 'eng.traineddata.gz' | head -n 1)
-          cp "$LANG_FILE" "$GITHUB_WORKSPACE/site/vendor/lang/"
-          ls -la "$GITHUB_WORKSPACE/site/vendor" "$GITHUB_WORKSPACE/site/vendor/core" "$GITHUB_WORKSPACE/site/vendor/lang"
+          cp "$LANG_FILE" "$GITHUB_WORKSPACE/site/scanner/vendor/lang/"
+          ls -la "$GITHUB_WORKSPACE/site/scanner/vendor" "$GITHUB_WORKSPACE/site/scanner/vendor/core" "$GITHUB_WORKSPACE/site/scanner/vendor/lang"
 
       - name: Build card data from Scryfall
         run: |
           pip install ijson
-          python scripts/build_data.py site
+          python scripts/build_data.py site/scanner
 
       - uses: actions/upload-pages-artifact@v4
         with:

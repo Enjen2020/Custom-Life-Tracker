@@ -1,55 +1,61 @@
-/* Oracle Scanner service worker: keeps the app, the text reader, fonts and viewed card
-   images available offline. Card data itself is saved by the app (IndexedDB), not here. */
-const SHELL = 'shell-v4';
+// Offline support for the installed app: the life tracker (this folder) and card lookup (scanner/).
+// Pages are fetched network-first, so a new upload is picked up the next time the app opens online,
+// and fall back to the saved copy with no connection. Card data is saved by the scanner page itself.
+const SHELL = 'shell-v5';
 const RUNTIME = 'runtime-v1';
 const IMAGES = 'images-v1';
-const MAX_IMAGES = 3000; // full pictures and Printings thumbnails, roughly 120 MB
+const MAX_IMAGES = 3000; // card pictures and Printings thumbnails, roughly 120 MB
 
-const SHELL_FILES = [
-  './', 'index.html', 'manifest.webmanifest',
-  'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
-  'vendor/tesseract.min.js', 'vendor/worker.min.js', 'vendor/lang/eng.traineddata.gz'
+const APP_FILES = [
+  './', './index.html', './manifest.webmanifest',
+  './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
+  './icons/apple-touch-icon.png', './icons/favicon-32.png',
+  './scanner/', './scanner/index.html',
+  './scanner/vendor/tesseract.min.js', './scanner/vendor/worker.min.js', './scanner/vendor/lang/eng.traineddata.gz'
 ];
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(SHELL).then(async c => {
-    await Promise.all(SHELL_FILES.map(f => c.add(f).catch(() => {})));
-    // every mana symbol, so card text looks right offline
-    try {
-      const map = await (await fetch('symbols/index.json')).json();
-      await c.put('symbols/index.json', new Response(JSON.stringify(map), { headers: { 'Content-Type': 'application/json' } }));
-      await Promise.all(Object.values(map).map(f => c.add('symbols/' + encodeURIComponent(f)).catch(() => {})));
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(SHELL).then(async cache => {
+    // One missing file must not stop the rest from being saved.
+    await Promise.all(APP_FILES.map(f => cache.add(f).catch(() => {})));
+    try { // every mana symbol, so card text looks right offline
+      const map = await (await fetch('./scanner/symbols/index.json')).json();
+      await cache.put('./scanner/symbols/index.json', new Response(JSON.stringify(map), { headers: { 'Content-Type': 'application/json' } }));
+      await Promise.all(Object.values(map).map(f => cache.add('./scanner/symbols/' + encodeURIComponent(f)).catch(() => {})));
     } catch {}
-  }));
-  self.skipWaiting();
+  }).then(() => self.skipWaiting()));
 });
 
-self.addEventListener('activate', e => {
+self.addEventListener('activate', event => {
   const keep = [SHELL, RUNTIME, IMAGES];
-  e.waitUntil(caches.keys()
+  event.waitUntil(caches.keys()
     .then(keys => Promise.all(keys.filter(k => !keep.includes(k)).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
-async function cacheFirst(req, cacheName, after) {
+async function cacheFirst(request, cacheName, after) {
   const cache = await caches.open(cacheName);
-  const hit = await cache.match(req);
+  const hit = await cache.match(request);
   if (hit) return hit;
-  const res = await fetch(req);
-  if (res.ok || res.type === 'opaque') { await cache.put(req, res.clone()); after?.(cache); }
-  return res;
+  const response = await fetch(request);
+  if (response.ok || response.type === 'opaque') { await cache.put(request, response.clone()); after?.(cache); }
+  return response;
 }
 
-async function networkFirst(req, cacheName) {
-  const cache = await caches.open(cacheName);
+async function networkFirst(request) {
+  const cache = await caches.open(SHELL);
   try {
-    const res = await fetch(req);
-    if (res.ok) cache.put(req, res.clone());
-    return res;
+    const response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
   } catch {
-    return (await cache.match(req, { ignoreSearch: true }))
-      || (req.mode === 'navigate' && await cache.match('index.html'))
-      || Response.error();
+    const hit = await cache.match(request, { ignoreSearch: true });
+    if (hit) return hit;
+    if (request.mode === 'navigate') {
+      const inScanner = new URL(request.url).pathname.includes('/scanner/');
+      return (await cache.match(inScanner ? './scanner/index.html' : './index.html')) || Response.error();
+    }
+    return Response.error();
   }
 }
 
@@ -62,19 +68,19 @@ async function trimImages(cache) {
   } finally { trimming = false; }
 }
 
-self.addEventListener('fetch', e => {
-  const req = e.request;
-  if (req.method !== 'GET') return;
-  const url = new URL(req.url);
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
 
-  if (url.origin === location.origin) {
-    if (url.pathname.includes('/data/')) return;                    // the app downloads card data itself
-    if (url.pathname.includes('/vendor/')) return e.respondWith(cacheFirst(req, RUNTIME)); // text reader
-    return e.respondWith(networkFirst(req, SHELL));                 // the app: newest when online
+  if (url.origin === self.location.origin) {
+    if (url.pathname.includes('/scanner/data/')) return;                       // the scanner downloads card data itself
+    if (url.pathname.includes('/scanner/vendor/')) return event.respondWith(cacheFirst(request, RUNTIME)); // text reader
+    if (url.pathname.includes('/icons/')) return event.respondWith(cacheFirst(request, SHELL));
+    return event.respondWith(networkFirst(request));                         // pages: newest when online
   }
   if (url.hostname === 'cards.scryfall.io' || url.hostname === 'svgs.scryfall.io')
-    return e.respondWith(cacheFirst(req, IMAGES, trimImages));      // card pictures and mana symbols
-  if (['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net'].includes(url.hostname))
-    return e.respondWith(cacheFirst(req, RUNTIME));
+    return event.respondWith(cacheFirst(request, IMAGES, trimImages));       // card pictures and mana symbols
+  if (url.hostname === 'cdn.jsdelivr.net') return event.respondWith(cacheFirst(request, RUNTIME));
   // Everything else (Scryfall's live API) goes straight to the network.
 });

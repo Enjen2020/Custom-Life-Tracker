@@ -1,42 +1,39 @@
-# Oracle Scanner
+# Life Tracker
 
-Scan a Magic: The Gathering card with your phone's camera to see its Oracle text, legality and official rulings. Works offline once the card data is saved on your device.
+A shared-table Magic: The Gathering life tracker for 2–6 players, with built-in card lookup: scan a card with the camera (or search by name) to see its Oracle text, rulings, Commander details, printings and prices. Works offline once installed.
 
 **Live app:** https://enjen2020.github.io/Oracle-Scanner/
 
-Card data, images and rulings come from [Scryfall](https://scryfall.com). Not affiliated with Wizards of the Coast.
+Card data, images, prices and rulings come from [Scryfall](https://scryfall.com). Not affiliated with Wizards of the Coast.
 
 ## How it works
 
-- **Scanning:** reads the card name in the gold bar. For Japanese and other non-English printings, it reads the set code and collector number in the bottom-left corner instead.
-- **Offline:** the app saves every card's text, legality, rulings and prices on your device and refreshes them when you're online. Card pictures are saved as you look cards up.
-- **Prices:** TCGplayer market prices via Scryfall, refreshed daily in a separate small file, so the big card file only downloads when cards change.
-- **Daily updates:** a GitHub job rebuilds the card data from Scryfall every day and republishes the app. You don't need to do anything.
+- **Life tracker** (`app/index.html`): setup, the game table, per-player tools, history and settings. Light and dark mode.
+- **Card lookup** (`app/scanner/`): opens full screen over the game from any player's menu (**Look Up Card**), or from **Card Lookup** on the main menu. Closing it returns to exactly where you were.
+  - Scanning reads the card name, then the set code and collector number in the bottom-left corner to pick the exact printing. Japanese and other non-English printings are matched by that corner code.
+  - Every card shows its printings (borderless, showcase, extended art…) with prices; tap one to switch.
+- **Offline:** the scanner saves every card's text, legality, rulings and prices on the device and refreshes them when online. Card pictures are saved as you look cards up.
+- **Daily updates:** a GitHub job rebuilds the card data from Scryfall every day and republishes the app. Prices are a separate small file, so the big card file only downloads when cards change.
 
 ## Files
 
 | Path | What it is |
 | --- | --- |
-| `app/index.html` | The app. The `CardData` and `CardScanner` blocks at the top of the script are the parts to reuse in the life tracker. |
-| `app/sw.js` | Keeps the app working offline. |
-| `app/manifest.webmanifest`, `app/icons/` | Lets you install it to your home screen. |
-| `scripts/build_data.py` | Turns Scryfall's daily data into the small file the app downloads. |
+| `app/index.html` | The life tracker. |
+| `app/scanner/index.html` | Card lookup. The `CardData` and `CardScanner` blocks hold the lookup logic. |
+| `app/sw.js` | Keeps the whole app working offline. |
+| `app/manifest.webmanifest`, `app/icons/` | Lets you install it to your home screen. Folder names are lowercase: GitHub Pages treats `Icons` and `icons` as different. |
+| `scripts/build_data.py` | Turns Scryfall's daily data into the small files the app downloads. |
 | `.github/workflows/deploy.yml` | The daily job: builds the data and publishes the app. |
 
-## One-time setup
+## Installing on your phone or tablet
 
-1. In this repository, open **Settings → Pages**.
-2. Under **Build and deployment → Source**, choose **GitHub Actions**.
-3. Open the **Actions** tab, click **Update cards and publish**, then **Run workflow**. The first run takes a few minutes. A green check means the app is live at the address above.
+Open the live address, then:
 
-## Installing on your phone
-
-Open the live address in your phone's browser, then:
-
-- **iPhone (Safari):** Share button → **Add to Home Screen**.
+- **iPhone/iPad (Safari):** Share button → **Add to Home Screen**.
 - **Android (Chrome):** menu (⋮) → **Add to Home screen** or **Install app**.
 
-Open it from the home-screen icon once while online so it can save the card data. After that it works without a connection.
+Open it once while online and open Card Lookup once, so it can save the card data. After that it works without a connection.
 
 ## If something goes wrong
 

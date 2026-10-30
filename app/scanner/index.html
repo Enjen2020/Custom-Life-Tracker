@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Card Lookup · Life Tracker</title>
+<meta name="theme-color" content="#101114">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<script>/* Follow the life tracker's light/dark setting (same saved preferences). */
+function applyTrackerTheme(){try{const t=JSON.parse(localStorage.getItem('mtg-life-tracker-prototype-v1'))?.prefs?.theme;if(t==='light')document.documentElement.dataset.theme='light';else delete document.documentElement.dataset.theme;}catch(e){}}
+applyTrackerTheme();addEventListener('storage',e=>{if(e.key==='mtg-life-tracker-prototype-v1')applyTrackerTheme();});
+if(new URLSearchParams(location.search).has('embed'))document.documentElement.classList.add('embed');</script>
+<script src="vendor/tesseract.min.js"></script>
+<script>window.Tesseract || document.write('<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"><\/script>')</script>
+<style>
+/* Card lookup for the Life Tracker. Same design tokens as the tracker: dark by default, light when the
+   tracker's theme is set to light. Layout: sticky top bar; scanner/search column beside the card view on
+   wide screens, stacked on phones. */
+:root{
+  --bg:#101114; --s1:#17191d; --s2:#202228; --s3:#292b31; --line:#34363e;
+  --text:#f5f5f6; --muted:#b3b5be;
+  --gold:#d9bd79;          /* tracker accent: guide boxes, highlights */
+  --gold-text:#e2c98b;     /* accent used as text */
+  --primary-bg:#f2f3f5; --primary-fg:#17181c;
+  --focus:#73a8ed;
+  --ok:#79c49a; --warn:#e3b45c; --bad:#e47d7d;
+  --f-ui:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --f-display:var(--f-ui); --f-card:var(--f-ui);
+  --r:18px;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --bg:#f3f4f7; --s1:#ffffff; --s2:#eef0f3; --s3:#e4e6eb; --line:#d5d8de;
+  --text:#17181c; --muted:#5d6069;
+  --gold:#c9a24f; --gold-text:#83621a;
+  --primary-bg:#17181c; --primary-fg:#ffffff;
+  --focus:#2f6fc4;
+  --ok:#2f8a55; --warn:#9a6a10; --bad:#b3383f;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font:15px/1.5 var(--f-ui);-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom,0px)}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+img{max-width:100%}
+[hidden]{display:none!important}
+.ico{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.topbar .in{max-width:1120px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{font:780 .9rem/1.2 var(--f-ui);letter-spacing:.16em;text-transform:uppercase;margin:0;white-space:nowrap}
+.brand span{color:var(--muted);font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--s1);border-radius:999px;padding:6px 12px 6px 10px;font:500 .85rem var(--f-ui);color:var(--muted);white-space:nowrap}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.chip.ok .dot{background:var(--ok)} .chip.warn .dot{background:var(--warn)} .chip.busy .dot{background:var(--gold-text);animation:blink 1s infinite}
+.chip.ok{color:var(--text)}
+@keyframes blink{50%{opacity:.25}}
+.progress{position:absolute;left:0;bottom:-1px;height:2px;background:var(--gold);width:0;transition:width .2s}
+
+main{max-width:1120px;margin:0 auto;padding-block:16px 32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:860px){main{grid-template-columns:minmax(0,1fr);gap:22px}}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.stack{display:flex;flex-direction:column;gap:10px;min-width:0}
+@media (min-width:861px){.side{position:sticky;top:72px}}
+
+/* segmented tabs */
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--s1);border:1px solid var(--line);border-radius:14px;padding:4px}
+.seg button{border:0;background:none;border-radius:10px;padding:10px 8px;min-height:44px;font:600 .95rem var(--f-ui);color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px}
+.seg button[aria-selected="true"]{background:var(--primary-bg);color:var(--primary-fg)}
+
+/* camera */
+.viewport{position:relative;aspect-ratio:3/4;max-height:68vh;width:100%;background:#050607;border-radius:var(--r);overflow:hidden}
+.viewport video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.frame{position:absolute;left:50%;top:43%;height:76%;max-width:88%;aspect-ratio:63/88;transform:translate(-50%,-50%);border-radius:4.5%/3.2%;box-shadow:0 0 0 999px rgba(5,6,7,.5);outline:1px solid rgba(236,232,223,.35)}
+.band{position:absolute;border:2px solid var(--gold);border-radius:6px}
+.band.name{left:6%;top:3.6%;width:72%;height:7.5%}
+.band.code{left:4%;bottom:2.4%;width:42%;height:5.6%;border-style:dashed;border-color:rgba(212,171,85,.75)}
+.viewport.reading .band{animation:glow .9s ease-in-out infinite}
+@keyframes glow{50%{background:rgba(212,171,85,.25)}}
+@media (prefers-reduced-motion:reduce){.viewport.reading .band{animation:none;background:rgba(212,171,85,.2)}.chip.busy .dot{animation:none}}
+.camctl{position:absolute;left:0;right:0;bottom:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:12px 16px 14px;background:linear-gradient(transparent,rgba(5,6,7,.75))}
+#torch-btn{grid-column:1;justify-self:start}
+.shutter{grid-column:2;width:64px;height:64px;border-radius:50%;border:3px solid #f5f5f6;background:none;padding:4px;justify-self:center}
+.shutter span{display:block;width:100%;height:100%;border-radius:50%;background:#f5f5f6;transition:transform .12s}
+.shutter:active span{transform:scale(.9)}
+.shutter:disabled{opacity:.4}
+.round{width:44px;height:44px;border-radius:50%;border:0;background:rgba(245,245,246,.16);color:#f5f5f6;display:grid;place-items:center}
+.round[aria-pressed="true"]{background:var(--gold);color:#1a1408}
+.pill{grid-column:3;justify-self:end;border:0;border-radius:999px;padding:0 16px;min-height:44px;font:700 .8rem var(--f-ui);letter-spacing:.08em;text-transform:uppercase;background:rgba(245,245,246,.16);color:#f5f5f6}
+.pill[aria-pressed="true"]{background:#f5f5f6;color:#17181c}
+.start{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;background:rgba(5,6,7,.72)}
+.start p{margin:0;color:#d1d3d9;font-size:.95rem;line-height:1.5;max-width:30ch}
+.status{display:flex;gap:8px;align-items:flex-start;font:500 .9rem/1.4 var(--f-ui);color:var(--muted);min-height:1.4em}
+.status::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--line);margin-top:.4em;flex:none}
+.status.ok{color:var(--text)} .status.ok::before{background:var(--ok)}
+.status.warn::before{background:var(--warn)} .status.error{color:var(--bad)} .status.error::before{background:var(--bad)}
+.status.busy::before{background:var(--gold-text)}
+
+.btn{border:1px solid var(--line);background:var(--s1);border-radius:13px;padding:10px 17px;min-height:46px;font:680 .95rem var(--f-ui);display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:var(--primary-bg);border-color:var(--primary-bg);color:var(--primary-fg)}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* search */
+.searchbox{position:relative}
+.searchbox .ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.searchbox input{width:100%;padding:13px 14px 13px 44px;border-radius:12px;border:1px solid var(--line);background:var(--s1);font-size:1rem}
+.searchbox input:focus{border-color:var(--focus);outline:none}
+.suggest{display:flex;flex-direction:column;background:var(--s1);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.suggest button{text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:12px 14px;min-height:46px}
+.suggest button:first-child{border-top:0}
+.suggest button:hover{background:var(--s2)}
+
+.label{font:650 .75rem var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0}
+.recent{display:flex;flex-direction:column;gap:8px;min-width:0}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;border:1px solid var(--line);background:var(--s1);border-radius:999px;padding:0 14px;min-height:40px;font-size:.9rem;white-space:nowrap}
+
+/* card view */
+.result{min-width:0;display:flex;flex-direction:column;gap:24px}
+.hero{display:grid;grid-template-columns:minmax(0,250px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:600px){.hero{grid-template-columns:minmax(0,1fr)}.art{max-width:280px;margin:0 auto}}
+.art{position:relative;width:100%}
+.art img{width:100%;display:block;border-radius:4.75%/3.5%;background:var(--s1);aspect-ratio:488/680;box-shadow:0 12px 32px rgba(0,0,0,.45)}
+.flip{position:absolute;right:8px;bottom:8px}
+.info{display:flex;flex-direction:column;gap:14px;min-width:0}
+.example{align-self:flex-start;font:650 .75rem var(--f-ui);letter-spacing:.12em;text-transform:uppercase;border:1px dashed var(--muted);color:var(--muted);border-radius:6px;padding:2px 8px}
+.face{display:flex;flex-direction:column;gap:6px}
+.face + .face{border-top:1px solid var(--line);padding-top:14px}
+.titleline{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.titleline h2{font:730 1.7rem/1.12 var(--f-ui);letter-spacing:-.035em;margin:0;text-wrap:balance;min-width:0}
+.cost{white-space:nowrap;padding-top:.3em}
+.sym{width:1.05em;height:1.05em;vertical-align:-.15em;margin:0 1px}
+.type{font:500 .95rem var(--f-ui);color:var(--muted)}
+.oracle{font:1rem/1.6 var(--f-card)}
+.oracle p{margin:.3em 0;max-width:62ch}
+.oracle i{color:var(--muted)}
+.pt{align-self:flex-start;font:780 1rem var(--f-ui);font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:8px;padding:1px 10px}
+.printed{font-size:.88rem;color:var(--muted)}
+
+.prices{display:flex;flex-direction:column;gap:8px}
+.ptiles{display:grid;gap:8px}
+.ptile{background:var(--s1);border:1px solid var(--line);border-radius:13px;padding:8px 12px;display:flex;flex-direction:column}
+.ptile b{font:760 1.25rem/1.25 var(--f-ui);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.ptile.none b{color:var(--muted);font-weight:500}
+.pnote{font-size:.85rem;line-height:1.5;color:var(--muted)}
+.pnote b{color:var(--text);font-weight:600}
+
+.prints{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity;scrollbar-width:thin}
+.pv{flex:none;width:112px;display:flex;flex-direction:column;gap:3px;text-align:left;border:0;background:none;padding:0;scroll-snap-align:start}
+.pv img{width:112px;aspect-ratio:146/204;border-radius:5px;background:var(--s1);object-fit:cover;outline:2px solid transparent;outline-offset:2px}
+.pv[aria-current="true"] img{outline-color:var(--text)}
+.pv-set{font:680 .8rem var(--f-ui);letter-spacing:.04em;margin-top:4px}
+.pv-tr{font-size:.75rem;color:var(--muted);line-height:1.3;min-height:1.3em}
+.pv-price{font:760 .95rem var(--f-ui);font-variant-numeric:tabular-nums}
+.pv[aria-current="true"] .pv-set{color:var(--gold-text)}
+section.block{display:flex;flex-direction:column;gap:10px}
+section.block > h3{margin:0;font:650 .75rem var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:10px}
+section.block > h3::after{content:"";flex:1;height:1px;background:var(--line)}
+.cmdr{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pips{display:inline-flex;align-items:center;gap:3px;margin-right:6px;font-weight:500}
+.pips .sym{width:1.45em;height:1.45em}
+.tag{font:680 .75rem var(--f-ui);letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:5px 11px;border:1px solid var(--line)}
+.tag.gc{color:var(--gold-text);border-color:color-mix(in srgb,var(--gold) 70%,transparent)}
+.tag.lead{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 60%,transparent)}
+.tag.ban{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 60%,transparent)}
+.legal{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+@media (max-width:480px){.legal{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.legal div{display:flex;justify-content:space-between;align-items:center;gap:6px;background:var(--s1);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:.88rem}
+.legal span:last-child{font-weight:700;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase}
+.s-legal{color:var(--ok)} .s-not_legal{color:var(--muted)} .s-banned{color:var(--bad)} .s-restricted{color:var(--warn)}
+.ruling{padding:12px 0;border-bottom:1px solid var(--line)}
+.ruling:last-child{border-bottom:0}
+.ruling .when{font-size:.8rem;letter-spacing:.04em;color:var(--muted)}
+.ruling .when b{color:var(--gold-text);font-weight:600}
+.ruling p{margin:.3em 0 0;max-width:68ch;font:1rem/1.6 var(--f-card)}
+.empty{color:var(--muted);font-style:italic;margin:0}
+.meta{font-size:.85rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
+.meta a{color:var(--text);text-underline-offset:3px}
+.again{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));align-self:center;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.placeholder{border:1px dashed var(--line);border-radius:var(--r);padding:28px;color:var(--muted);text-align:center}
+footer{grid-column:1/-1;font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+footer a{color:var(--muted)}
+
+/* data sheet */
+dialog.sheet{border:1px solid var(--line);background:var(--s1);color:var(--text);border-radius:22px;padding:0;width:min(420px,calc(100% - 32px));max-height:calc(100% - 32px)}
+dialog.sheet::backdrop{background:rgba(4,5,7,.74);backdrop-filter:blur(9px)}
+@media (max-width:560px){dialog.sheet{margin:auto auto 0;width:100%;max-width:100%;border-radius:18px 18px 0 0;border-bottom:0}}
+.sheet .in{padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:16px}
+.sheet header{display:flex;justify-content:space-between;align-items:center}
+.sheet h2{margin:0;font:750 1.15rem var(--f-ui);letter-spacing:-.025em}
+.rows{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px}
+.rows div{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid var(--line);font-size:.92rem}
+.rows div:first-child{border-top:0}
+.rows span:first-child{color:var(--muted)}
+.rows span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:3px;background:var(--s2);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--text);transition:width .2s}
+.sheet .msg{font-size:.88rem;color:var(--muted);margin:0}
+.sheet .msg.warn{color:var(--warn)}
+.iconbtn{border:1px solid var(--line);background:var(--s2);color:var(--text);width:44px;height:44px;border-radius:12px;display:grid;place-items:center;padding:0}
+/* Inside the life tracker: compact bar with a Close button */
+.close-lookup{display:none}
+.embed .close-lookup{display:grid}
+.embed .back-link{display:none}
+.topbar .right{display:flex;align-items:center;gap:8px}
+.embed footer{display:none}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3 5 13h6l-1 8 8-10h-6z"/></symbol>
+  <symbol id="i-flip" viewBox="0 0 24 24"><path d="M4 9a8 8 0 0 1 14-3l2 2M20 15a8 8 0 0 1-14 3l-2-2"/><path d="M20 4v4h-4M4 20v-4h4"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 13a8 8 0 0 0 14.5 4"/><path d="M5 3v4h4M19 21v-4h-4"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+</svg>
+
+<div class="topbar">
+  <div class="in">
+    <h1 class="brand">Card Lookup</h1>
+    <div class="right">
+      <button class="chip" id="sync" aria-haspopup="dialog" aria-label="Card data saved on this device"><span class="dot" aria-hidden="true"></span><span id="sync-text">Checking…</span></button>
+      <a class="iconbtn back-link" href="../" aria-label="Back to Life Tracker" title="Life Tracker"><svg class="ico"><use href="#i-back"/></svg></a>
+      <button class="iconbtn close-lookup" id="close-lookup" aria-label="Close card lookup" title="Close"><svg class="ico"><use href="#i-x"/></svg></button>
+    </div>
+  </div>
+  <div class="progress" id="progress"></div>
+</div>
+
+<main>
+  <div class="side">
+    <div class="seg" role="tablist" aria-label="Lookup mode">
+      <button id="tab-scan" role="tab" aria-selected="true"><svg class="ico"><use href="#i-cam"/></svg>Scan</button>
+      <button id="tab-search" role="tab" aria-selected="false"><svg class="ico"><use href="#i-search"/></svg>Search</button>
+    </div>
+
+    <div id="scan-pane" class="stack">
+      <div class="viewport" id="viewport">
+        <video id="video" playsinline muted></video>
+        <div class="frame"><div class="band name" id="band"></div><div class="band code" id="codeband"></div></div>
+        <div class="camctl">
+          <button class="round" id="torch-btn" hidden aria-pressed="false" aria-label="Flashlight"><svg class="ico"><use href="#i-bolt"/></svg></button>
+          <button class="shutter" id="scan-btn" disabled aria-label="Scan now"><span></span></button>
+          <button class="pill" id="auto" aria-pressed="true" title="Keep scanning until a card is found">Auto</button>
+        </div>
+        <div class="start" id="start">
+          <button class="btn primary" id="start-btn"><svg class="ico"><use href="#i-cam"/></svg>Start camera</button>
+          <p>Fit the card in the outline with its name in the gold bar. For non-English cards, the corner box reads the set code.</p>
+        </div>
+      </div>
+      <div class="status" id="status" role="status">Camera is off.</div>
+    </div>
+
+    <div id="search-pane" class="stack" hidden>
+      <form id="search-form" class="searchbox" autocomplete="off" role="search">
+        <svg class="ico"><use href="#i-search"/></svg>
+        <input id="q" type="search" placeholder="Card name, e.g. Rhystic Study" aria-label="Card name" enterkeyhint="search">
+      </form>
+      <div class="suggest" id="suggest" hidden></div>
+      <div class="status" id="search-status" hidden></div>
+    </div>
+
+    <div class="recent" id="history-wrap" hidden>
+      <p class="label">Recent</p>
+      <div class="chips" id="history"></div>
+    </div>
+  </div>
+
+  <div class="result" id="result" aria-live="polite"></div>
+
+  <footer>Card data, prices, images and rulings from <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>. Not affiliated with Wizards of the Coast.</footer>
+</main>
+
+<dialog class="sheet" id="sheet" aria-labelledby="sheet-title">
+  <div class="in">
+    <header><h2 id="sheet-title">Card data</h2><button class="iconbtn" id="sheet-close" aria-label="Close"><svg class="ico"><use href="#i-x"/></svg></button></header>
+    <div class="rows">
+      <div><span>Connection</span><span id="d-net">–</span></div>
+      <div><span>Cards saved</span><span id="d-cards">–</span></div>
+      <div><span>Card data from</span><span id="d-built">–</span></div>
+      <div><span>Prices from</span><span id="d-prices">–</span></div>
+    </div>
+    <div class="bar" id="d-bar" hidden><i id="d-fill"></i></div>
+    <p class="msg" id="d-msg">The app updates itself whenever it opens with internet. Prices refresh daily.</p>
+    <button class="btn primary" id="update-btn"><svg class="ico"><use href="#i-sync"/></svg>Update now</button>
+  </div>
+</dialog>
+
+<script>
+/* ===== Offline card data: saved on the device, refreshed from data/cards.json ===== */
+const CardData = (() => {
+  const DB = 'oracle-scanner', STORE = 'kv';
+  const RARITY = { c: 'common', u: 'uncommon', r: 'rare', m: 'mythic', s: 'special', b: 'bonus' };
+  const LEGAL = { l: 'legal', n: 'not_legal', b: 'banned', r: 'restricted' };
+  let data = null, idx = null, prices = null;
+
+  function openDB() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open(DB, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore(STORE);
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  }
+  async function idb(mode, fn) {
+    const db = await openDB();
+    return new Promise((res, rej) => {
+      const req = fn(db.transaction(STORE, mode).objectStore(STORE));
+      req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
+    });
+  }
+  const norm = s => String(s).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+
+  function buildIndex(d) {
+    const byId = new Map(), bySetNum = new Map(), anyPrint = new Map(), byOracle = new Map(), names = [];
+    for (const p of d.prints) {
+      byId.set(p[0], p);
+      if (!byOracle.has(p[3])) byOracle.set(p[3], []);
+      byOracle.get(p[3]).push(p);
+      const k = p[1] + '|' + p[2], cur = bySetNum.get(k);
+      if (!cur || (cur[4] !== 'en' && p[4] === 'en')) bySetNum.set(k, p);
+      const a = anyPrint.get(p[3]);
+      if (!a || (a[4] !== 'en' && p[4] === 'en')) anyPrint.set(p[3], p);
+    }
+    for (const [oid, o] of Object.entries(d.oracle)) {
+      names.push([norm(o.n), oid, o.n]);
+      for (const f of o.f || []) if (f.n !== o.n) names.push([norm(f.n), oid, o.n]);
+    }
+    return { byId, bySetNum, anyPrint, byOracle, names };
+  }
+  function use(d) { data = d; idx = buildIndex(d); }
+
+  function toCard(p) {
+    const [id, set, num, oid, lang, rar, back, printed, url, tr] = p, o = data.oracle[oid];
+    const img = side => `https://cards.scryfall.io/normal/${side}/${id[0]}/${id[1]}/${id}.jpg`;
+    const front = url || img('front');
+    const face = f => ({ name: f.n, mana_cost: f.m, type_line: f.t, oracle_text: f.o, power: f.p, toughness: f.tg, loyalty: f.l, defense: f.d });
+    const card = {
+      ...face(o), id, oracle_id: oid, set, collector_number: num, lang, printed_name: printed || undefined,
+      set_name: data.sets[set] || set.toUpperCase(), rarity: RARITY[rar] || 'common',
+      legalities: Object.fromEntries(data.formats.map((k, i) => [k, LEGAL[o.g[i]] || 'not_legal'])),
+      scryfall_uri: `https://scryfall.com/card/${set}/${encodeURIComponent(num)}`,
+      color_identity: (o.ci || '').split('').filter(Boolean), game_changer: !!o.gc,
+      prices: priceObj(prices?.p[id]), _cheapest: cheapest(oid), _pricesDate: prices?.date, _tr: tr || '',
+      _rulings: (o.r || []).map(([published_at, source, comment]) => ({ published_at, source, comment }))
+    };
+    if (o.f) {
+      card.card_faces = o.f.map(face);
+      if (back) { card.card_faces[0].image_uris = { normal: front }; card.card_faces[1].image_uris = { normal: img('back') }; }
+      else card.image_uris = { normal: front };
+    } else card.image_uris = { normal: front };
+    return card;
+  }
+  const money = v => v == null ? null : v.toFixed(2);
+  const priceObj = pr => pr ? { usd: money(pr[0]), usd_foil: money(pr[1]), usd_etched: money(pr[2]) } : {};
+  // Lowest price across every printing and finish of a card.
+  function cheapest(oid) {
+    if (!prices) return null;
+    let best = null;
+    for (const p of idx.byOracle.get(oid) || []) {
+      const pr = prices.p[p[0]]; if (!pr) continue;
+      pr.forEach((v, i) => {
+        if (v != null && (!best || v < best.value))
+          best = { value: v, finish: ['', 'foil', 'etched'][i], set: p[1], num: p[2], id: p[0] };
+      });
+    }
+    return best;
+  }
+  // Every printing of a card, newest set first, for the Printings picker.
+  function printingsOf(oid) {
+    const dates = data.set_dates || {};
+    return (idx.byOracle.get(oid) || []).map(p => {
+      const [id, set, num, , lang, , , , url, tr] = p, pr = prices?.p[id] || [];
+      const big = url || `https://cards.scryfall.io/normal/front/${id[0]}/${id[1]}/${id}.jpg`;
+      return { id, set, num, lang, tr: tr || '', date: dates[set] || '', setName: data.sets[set] || set.toUpperCase(),
+               thumb: big.replace('/normal/', '/small/'), price: pr[0] ?? null, foil: pr[1] ?? null, etched: pr[2] ?? null };
+    }).sort((a, b) => b.date.localeCompare(a.date) || (a.lang === 'en' ? -1 : 0) - (b.lang === 'en' ? -1 : 0)
+      || a.num.localeCompare(b.num, undefined, { numeric: true }));
+  }
+  const printFor = oid => idx.byId.get(data.oracle[oid].pr) || idx.anyPrint.get(oid);
+
+  function lev(a, b) {
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      for (let j = 1; j <= b.length; j++)
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  // Tolerates misread letters and names cut off at the end of the scan box.
+  function fuzzyOid(q) {
+    const n = norm(q); if (n.length < 3) return null;
+    let best = null, score = Infinity;
+    for (const [nm, oid] of idx.names) {
+      if (nm === n) return oid;
+      let s;
+      if (n.length >= 4 && nm.startsWith(n)) s = 0.2 * (1 - n.length / nm.length); // start of a longer name: shortest wins
+      else if (Math.abs(nm.length - n.length) > Math.max(3, n.length * 0.4)) continue;
+      else s = lev(nm, n) / Math.max(nm.length, n.length);
+      if (s < score) { score = s; best = oid; }
+    }
+    return score <= 0.34 ? best : null;
+  }
+
+  return {
+    get ready() { return !!data; },
+    get info() { return data ? { version: data.version, built: data.built, cards: Object.keys(data.oracle).length, pricesDate: prices?.date } : null; },
+    use, // for tests
+
+    async loadSaved() {
+      try { const d = await idb('readonly', s => s.get('cards')); if (d) use(d); } catch {}
+      try { prices = (await idb('readonly', s => s.get('prices'))) || null; } catch {}
+      return !!data;
+    },
+
+    // Downloads the card file and/or the prices file when the published copy differs from the saved one.
+    // onProgress(fraction 0..1, label)
+    async update({ force = false, onProgress } = {}) {
+      const r = await fetch('data/meta.json', { cache: 'no-store' }).catch(() => null);
+      if (!r || !r.ok) return { status: 'unavailable' };
+      const meta = await r.json();
+      const needCards = force || !data || data.version !== meta.version;
+      const needPrices = meta.prices_version && (force || !prices || prices.version !== meta.prices_version);
+      if (!needCards && !needPrices) return { status: 'current', meta };
+      const total = (needCards ? meta.bytes : 0) + (needPrices ? meta.prices_bytes : 0) || 1;
+      let done = 0;
+      async function download(path, version) {
+        const res = await fetch(path + '?v=' + encodeURIComponent(version), { cache: 'no-store' });
+        if (!res.ok) throw new Error('download failed (' + res.status + ')');
+        const reader = res.body.getReader(), chunks = [];
+        for (;;) {
+          const { done: end, value } = await reader.read(); if (end) break;
+          chunks.push(value); done += value.length; onProgress?.(Math.min(1, done / total));
+        }
+        return JSON.parse(await new Blob(chunks).text());
+      }
+      if (needCards) {
+        const d = await download('data/cards.json', meta.version);
+        d.built = meta.built;
+        await idb('readwrite', s => s.put(d, 'cards'));
+        use(d);
+      }
+      if (needPrices) {
+        prices = await download('data/prices.json', meta.prices_version);
+        await idb('readwrite', s => s.put(prices, 'prices'));
+      }
+      return { status: 'updated', meta };
+    },
+
+    fuzzy(name) { const oid = fuzzyOid(name); return oid ? toCard(printFor(oid)) : null; },
+    exact(name) { const n = norm(name), hit = idx.names.find(x => x[0] === n); return hit ? toCard(printFor(hit[1])) : null; },
+    bySetNumber(set, num) { const p = idx.bySetNum.get(set.toLowerCase() + '|' + num); return p ? toCard(p) : null; },
+    byId(id) { const p = idx.byId.get(id); return p ? toCard(p) : null; },
+    printingsOf(oid) { return idx?.byOracle.has(oid) ? printingsOf(oid) : null; },
+    autocomplete(q) {
+      const n = norm(q), starts = [], has = [], seen = new Set();
+      for (const [nm, , display] of idx.names) {
+        if (seen.has(display)) continue;
+        if (nm.startsWith(n)) { starts.push(display); seen.add(display); }
+        else if (nm.includes(n)) { has.push(display); seen.add(display); }
+      }
+      const byLen = (a, b) => a.length - b.length;
+      return [...starts.sort(byLen), ...has.sort(byLen)].slice(0, 8);
+    }
+  };
+})();
+
+// Special-version flags for a live Scryfall card, same letters as the saved data uses.
+function treatmentsOf(c) {
+  if (c._tr != null) return c._tr;
+  const fx = c.frame_effects || [];
+  return (c.border_color === 'borderless' ? 'b' : '') + (fx.includes('extendedart') ? 'e' : '') + (fx.includes('showcase') ? 's' : '')
+    + (c.full_art ? 'f' : '') + (['1993', '1997'].includes(c.frame) ? 'r' : '') + (c.promo ? 'p' : '') + (c.textless ? 't' : '')
+    + ((c.promo_types || []).includes('serialized') ? 'n' : '');
+}
+
+/* ===== CardScanner core: no DOM, easy to lift into the life tracker later.
+   Uses the saved card data first and Scryfall's live API only as a fallback. ===== */
+const CardScanner = (() => {
+  const API = 'https://api.scryfall.com';
+  let last = 0, worker = null;
+  const online = () => navigator.onLine !== false;
+
+  async function sf(pathOrUrl) {
+    const wait = 110 - (Date.now() - last);            // Scryfall asks for ~10 req/s max
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    last = Date.now();
+    const url = pathOrUrl.startsWith('http') ? pathOrUrl : API + pathOrUrl;
+    let res;
+    try { res = await fetch(url, { headers: { Accept: 'application/json' } }); }
+    catch { throw new Error(CardData.ready ? 'you\'re offline' : 'you\'re offline and card data isn\'t saved on this device yet'); }
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) { const e = new Error(json.details || 'Scryfall lookup failed'); e.status = res.status; throw e; }
+    return json;
+  }
+  function notFound() { const e = new Error('No matching card'); e.status = 404; return e; }
+  // Try the saved data; if it has no answer, ask Scryfall when online.
+  async function localFirst(localFn, apiFn) {
+    if (CardData.ready) {
+      const hit = localFn();
+      if (hit) return hit;
+      if (!online()) throw notFound();
+    }
+    return apiFn();
+  }
+
+  return {
+    fuzzy: name => localFirst(() => CardData.fuzzy(name), () => sf('/cards/named?fuzzy=' + encodeURIComponent(name))),
+    exact: name => localFirst(() => CardData.exact(name), () => sf('/cards/named?exact=' + encodeURIComponent(name))),
+    byId: id => localFirst(() => CardData.byId(id), () => sf('/cards/' + id)),
+    bySetNumber: (set, num) => localFirst(() => CardData.bySetNumber(set, num),
+      () => sf(`/cards/${encodeURIComponent(set.toLowerCase())}/${encodeURIComponent(num)}`)),
+    autocomplete: async q => CardData.ready ? CardData.autocomplete(q)
+      : sf('/cards/autocomplete?q=' + encodeURIComponent(q)).then(r => r.data || []),
+    rulings: async card => card._rulings || sf(card.rulings_uri).then(r => r.data || []),
+    async printings(card) {
+      const local = CardData.ready && CardData.printingsOf(card.oracle_id);
+      if (local) return local;
+      if (!card.prints_search_uri) return [];
+      const r = await sf(card.prints_search_uri);
+      return (r.data || []).map(c => {
+        const img = c.image_uris || c.card_faces?.[0]?.image_uris || {}, pr = c.prices || {};
+        const num = v => v == null ? null : Number(v);
+        return { id: c.id, set: c.set, num: c.collector_number, lang: c.lang, tr: treatmentsOf(c), date: c.released_at || '',
+                 setName: c.set_name, thumb: img.small, price: num(pr.usd), foil: num(pr.usd_foil), etched: num(pr.usd_etched) };
+      });
+    },
+    // Foreign printed names (e.g. Japanese). Online only. Returns the first matching printing, or throws 404.
+    foreignName: name => sf('/cards/search?include_multilingual=true&q=' + encodeURIComponent(`${name} lang:any`)).then(r => r.data[0]),
+
+    async ocrReady() {
+      if (worker) return worker;
+      // Use the copy of the text reader published with the app (works offline); fall back to the CDN.
+      const local = await fetch('vendor/worker.min.js', { method: 'HEAD' }).then(r => r.ok).catch(() => false);
+      const base = new URL('vendor/', location.href).href;
+      worker = await Tesseract.createWorker('eng', 1, local
+        ? { workerPath: base + 'worker.min.js', corePath: base + 'core', langPath: base + 'lang', workerBlobURL: false }
+        : {});
+      return worker;
+    },
+
+    async readName(canvas) {
+      const w = await this.ocrReady();
+      await w.setParameters({
+        tessedit_pageseg_mode: '7', // a single line of text
+        tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ',-"
+      });
+      const { data } = await w.recognize(canvas);
+      return this.cleanName(data.text);
+    },
+
+    // Reads the bottom-left info block, e.g. "0123 R" / "MOM • JA". Returns [{set, num}] candidates.
+    async readCode(canvas) {
+      const w = await this.ocrReady();
+      await w.setParameters({
+        tessedit_pageseg_mode: '6', // a small block of lines
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/ '
+      });
+      const { data } = await w.recognize(canvas);
+      return this.parseCode(data.text);
+    },
+
+    parseCode(text) {
+      const tokens = text.toUpperCase().replace(/[^A-Z0-9/ \n]/g, ' ').split(/\s+/).filter(Boolean);
+      const numTok = tokens.find(t => /^\d{1,4}(\/\d+)?$/.test(t));
+      if (!numTok) return [];
+      const num = String(parseInt(numTok.split('/')[0], 10));   // "0123/0281" -> "123"
+      const LANG = ['EN', 'JA', 'JP', 'DE', 'FR', 'IT', 'ES', 'PT', 'RU', 'KO', 'CS', 'CT', 'PH'];
+      const sets = tokens.filter(t => /^[A-Z0-9]{3,5}$/.test(t) && /[A-Z]/.test(t) && !LANG.includes(t));
+      return [...new Set(sets)].slice(0, 3).map(set => ({ set, num }));
+    },
+
+    cleanName(text) {
+      let words = text.replace(/[^A-Za-z ',\-]/g, ' ').replace(/\s+/g, ' ').trim().split(' ');
+      while (words.length && words[words.length - 1].length < 2) words.pop(); // mana-symbol noise
+      while (words.length && words[0].length < 2 && words[0] !== 'A') words.shift();
+      const s = words.join(' ');
+      return s.replace(/[^A-Za-z]/g, '').length >= 3 ? s : '';
+    }
+  };
+})();
+
+
+/* ===== UI ===== */
+const $ = id => document.getElementById(id);
+const video = $('video'), viewport = $('viewport'), band = $('band');
+const work = document.createElement('canvas'), ctx = work.getContext('2d', { willReadFrequently: true });
+const ui = { stream: null, track: null, busy: false, auto: true, lastTried: '', lastCode: '', timer: null, torch: false, mode: 'scan' };
+
+function setStatus(msg, kind = '') { const s = $('status'); s.textContent = msg; s.className = 'status ' + kind; }
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const online = () => navigator.onLine !== false;
+
+let SYMBOLS = null; // {"{W/P}": "WP.svg", ...} published with the app, so symbols work offline
+const symbolsReady = fetch('symbols/index.json').then(r => r.ok ? r.json() : null).then(m => { SYMBOLS = m; }).catch(() => {});
+function symbolSrc(s) {
+  const file = SYMBOLS?.['{' + s + '}'];
+  return file ? 'symbols/' + encodeURIComponent(file)
+    : `https://svgs.scryfall.io/card-symbols/${encodeURIComponent(s.replace(/\//g, ''))}.svg`;
+}
+function symbols(text) {
+  return esc(text).replace(/\{([^}]+)\}/g, (m, s) => `<img class="sym" alt="{${s}}" src="${symbolSrc(s)}">`);
+}
+function oracleHTML(text) {
+  if (!text) return '';
+  return text.split('\n').map(line => `<p>${symbols(line).replace(/\(([^)]*)\)/g, '<i>($1)</i>')}</p>`).join('');
+}
+function fmtDate(iso) { try { return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return ''; } }
+
+/* --- camera --- */
+async function startCamera() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setStatus('This browser can\'t use the camera here. Open the app from its https address, or use Search.', 'error'); return;
+  }
+  try {
+    setStatus('Asking for camera access…', 'busy');
+    ui.stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false
+    });
+    video.srcObject = ui.stream; await video.play();
+    ui.track = ui.stream.getVideoTracks()[0];
+    $('start').hidden = true;
+    $('torch-btn').hidden = !(ui.track.getCapabilities?.() || {}).torch;
+    setStatus('Loading the text reader…', 'busy');
+    await CardScanner.ocrReady();
+    $('scan-btn').disabled = false;
+    setStatus('Line up the card name with the gold bar.');
+    scheduleAuto();
+  } catch (e) {
+    setStatus(e.name === 'NotAllowedError' ? 'Camera access is blocked. Allow it in your browser settings, or use Search.'
+      : 'Couldn\'t start the camera: ' + e.message, 'error');
+  }
+}
+function stopCamera() {
+  clearTimeout(ui.timer);
+  ui.stream?.getTracks().forEach(t => t.stop());
+  ui.stream = ui.track = null; video.srcObject = null;
+  $('start').hidden = false; $('scan-btn').disabled = true; $('torch-btn').hidden = true;
+  setStatus('Camera is off.');
+}
+async function toggleTorch() {
+  ui.torch = !ui.torch;
+  try { await ui.track.applyConstraints({ advanced: [{ torch: ui.torch }] }); }
+  catch { ui.torch = false; }
+  $('torch-btn').setAttribute('aria-pressed', ui.torch);
+}
+function setAuto(on) { ui.auto = on; $('auto').setAttribute('aria-pressed', on); if (on) { ui.lastTried = ''; ui.lastCode = ''; } }
+
+/* Crop a guide box out of the live frame, matching object-fit: cover. */
+function grabBand(el) {
+  const vw = video.videoWidth, vh = video.videoHeight; if (!vw) return null;
+  const box = viewport.getBoundingClientRect(), b = el.getBoundingClientRect();
+  const scale = Math.max(box.width / vw, box.height / vh);
+  const ox = (box.width - vw * scale) / 2, oy = (box.height - vh * scale) / 2;
+  const sx = (b.left - box.left - ox) / scale, sy = (b.top - box.top - oy) / scale;
+  const sw = b.width / scale, sh = b.height / scale;
+  const up = Math.min(3, Math.max(1, 700 / sw));
+  work.width = Math.round(sw * up); work.height = Math.round(sh * up);
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, work.width, work.height);
+  // grayscale, stretch contrast, and make the text dark on light
+  const img = ctx.getImageData(0, 0, work.width, work.height), d = img.data;
+  let min = 255, max = 0, sum = 0;
+  for (let i = 0; i < d.length; i += 4) { const g = d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11; d[i] = g; if (g < min) min = g; if (g > max) max = g; sum += g; }
+  const range = Math.max(1, max - min), invert = sum / (d.length / 4) < (min + max) / 2;
+  for (let i = 0; i < d.length; i += 4) { let v = (d[i] - min) * 255 / range; if (invert) v = 255 - v; d[i] = d[i + 1] = d[i + 2] = v; }
+  ctx.putImageData(img, 0, 0);
+  return work;
+}
+
+async function scanOnce(manual = false) {
+  if (ui.busy || !ui.stream) return;
+  ui.busy = true; viewport.classList.add('reading');
+  try {
+    // 1) English name in the top bar
+    let card = null, foundByCode = false;
+    const nameCanvas = grabBand(band); if (!nameCanvas) return;
+    const name = await CardScanner.readName(nameCanvas);
+    if (name && (manual || name !== ui.lastTried)) {
+      ui.lastTried = name;
+      setStatus(`Read “${name}”. Looking it up…`, 'busy');
+      card = await CardScanner.fuzzy(name).catch(e => { if (e.status !== 404) throw e; return null; });
+    }
+    // 2) Set code + collector number in the bottom-left (works on Japanese printings)
+    if (!card) {
+      const codes = await CardScanner.readCode(grabBand($('codeband')));
+      for (const { set, num } of codes) {
+        const key = `${set} ${num}`;
+        if (!manual && key === ui.lastCode) continue;
+        ui.lastCode = key;
+        setStatus(`Read ${set} #${num}. Looking it up…`, 'busy');
+        card = await CardScanner.bySetNumber(set, num).catch(e => { if (e.status !== 404) throw e; return null; });
+        if (card) { foundByCode = true; break; }
+      }
+    }
+    let exact = false;
+    if (card && !foundByCode) ({ card, exact } = await refinePrinting(card));
+    else if (card) exact = true;
+    if (!card) {
+      setStatus(manual ? 'Couldn\'t match this card. Line up the name or the corner code, and add light.'
+        : 'Scanning… line up the name, or the corner code on non-English cards.', manual ? 'warn' : '');
+      return;
+    }
+    navigator.vibrate?.(40);
+    setStatus(exact ? `Found ${card.name} · ${card.set.toUpperCase()} #${card.collector_number}.`
+      : `Found ${card.name}. If the art differs, pick your version under Printings.`, 'ok');
+    setAuto(false); // pause until "Scan another"
+    showCard(card, { scroll: true });
+  } catch (e) {
+    setStatus('Lookup failed: ' + e.message, 'error');
+  } finally { ui.busy = false; viewport.classList.remove('reading'); }
+}
+// The name is the same on every version of a card; the corner code (set + number) tells them apart.
+async function refinePrinting(card) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt) await new Promise(r => setTimeout(r, 250));
+    const canvas = grabBand($('codeband')); if (!canvas) break;
+    for (const { set, num } of await CardScanner.readCode(canvas)) {
+      const hit = await CardScanner.bySetNumber(set, num).catch(() => null);
+      if (hit && hit.oracle_id === card.oracle_id) return { card: hit, exact: true };
+    }
+  }
+  return { card, exact: false };
+}
+function scheduleAuto() {
+  clearTimeout(ui.timer);
+  ui.timer = setTimeout(async () => {
+    if (ui.stream && ui.auto && !document.hidden) await scanOnce(false);
+    if (ui.stream) scheduleAuto();
+  }, 900);
+}
+
+/* --- card view --- */
+const FORMATS = [['standard', 'Standard'], ['pioneer', 'Pioneer'], ['modern', 'Modern'], ['legacy', 'Legacy'],
+  ['vintage', 'Vintage'], ['commander', 'Commander'], ['pauper', 'Pauper'], ['brawl', 'Brawl']];
+const LANGS = { ja: 'Japanese', ko: 'Korean', zhs: 'Simplified Chinese', zht: 'Traditional Chinese', ru: 'Russian',
+  de: 'German', fr: 'French', it: 'Italian', es: 'Spanish', pt: 'Portuguese', ph: 'Phyrexian' };
+const STATUS = { legal: 'Legal', not_legal: 'No', banned: 'Banned', restricted: 'Restr.' };
+const TREATMENTS = { b: 'Borderless', e: 'Extended art', s: 'Showcase', f: 'Full art', r: 'Old frame', p: 'Promo', t: 'Textless', n: 'Serialized' };
+const trLabels = tr => [...(tr || '')].map(k => TREATMENTS[k]).filter(Boolean);
+const usd = v => v == null ? null : '$' + Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function faceHTML(f, card) {
+  const stats = f.power != null ? `${esc(f.power)}/${esc(f.toughness)}` : f.loyalty != null ? `Loyalty ${esc(f.loyalty)}` : f.defense != null ? `Defense ${esc(f.defense)}` : '';
+  return `<div class="face">
+    <div class="titleline"><h2>${esc(f.name)}</h2><span class="cost">${symbols(f.mana_cost || '')}</span></div>
+    <div class="type">${esc(f.type_line || card.type_line)}</div>
+    <div class="oracle">${oracleHTML(f.oracle_text)}</div>
+    ${stats ? `<span class="pt">${stats}</span>` : ''}
+  </div>`;
+}
+
+function pricesHTML(card) {
+  const p = card.prices || {};
+  const tiles = [['Normal', p.usd], ['Foil', p.usd_foil], ['Etched', p.usd_etched]];
+  const any = tiles.some(([, v]) => v != null);
+  const c = card._cheapest;
+  const cheapest = c && (!p.usd || c.value < Number(p.usd) - 0.005)
+    ? `Cheapest printing: <b>${usd(c.value)}</b>${c.finish ? ' ' + c.finish : ''} · ${esc(c.set.toUpperCase())} #${esc(c.num)}` : '';
+  if (!any && !cheapest) return `<section class="block"><h3>Price</h3><p class="empty">No price listed for this printing.</p></section>`;
+  const date = card._pricesDate ? 'Prices as of ' + fmtDate(card._pricesDate) : 'Current prices';
+  return `<section class="block prices"><h3>Price · this printing</h3>
+    <div class="ptiles" style="grid-template-columns:repeat(${tiles.filter(([k, v]) => v != null || k !== 'Etched').length},minmax(0,1fr))">${tiles.filter(([k, v]) => v != null || k !== 'Etched').map(([k, v]) =>
+      `<div class="ptile${v == null ? ' none' : ''}"><span class="label">${k}</span><b>${v == null ? '—' : usd(v)}</b></div>`).join('')}</div>
+    <div class="pnote">${cheapest ? cheapest + '<br>' : ''}${date} · TCGplayer market via Scryfall</div>
+  </section>`;
+}
+
+function commanderHTML(card, faces) {
+  const ci = card.color_identity || [];
+  const pips = ci.length ? ci.map(c => `<img class="sym" alt="{${c}}" src="${symbolSrc(c)}">`).join('')
+    : `<img class="sym" alt="{C}" src="${symbolSrc('C')}"> Colorless`;
+  const text = faces.map(f => f.oracle_text || '').join('\n') + (card.oracle_text || '');
+  const canLead = /\bLegendary\b.*\bCreature\b/.test(faces[0].type_line || card.type_line || '') || /can be your commander/i.test(text);
+  const status = card.legalities?.commander || 'not_legal';
+  return `<section class="block"><h3>Commander</h3>
+    <div class="cmdr">
+      <span class="pips" title="Color identity">${pips}</span>
+      ${card.game_changer ? '<span class="tag gc" title="On the Commander Game Changers list, which affects bracket choices">Game Changer</span>' : ''}
+      ${canLead && status !== 'not_legal' ? '<span class="tag lead">Can be your commander</span>' : ''}
+      ${status === 'banned' ? '<span class="tag ban">Banned</span>' : ''}
+    </div></section>`;
+}
+
+async function showCard(card, { example = false, scroll = false } = {}) {
+  const faces = card.card_faces?.length ? card.card_faces : [card];
+  const images = card.image_uris ? [card.image_uris.normal] : faces.map(f => f.image_uris?.normal).filter(Boolean);
+  const leg = card.legalities || {};
+  const foreign = card.lang && card.lang !== 'en';
+  const printedName = card.printed_name || faces.map(f => f.printed_name).filter(Boolean).join(' // ');
+  $('result').dataset.id = card.id;
+  $('result').innerHTML = `
+    <div class="hero">
+      <div class="art">
+        ${images[0] ? `<img id="card-img" src="${esc(images[0])}" alt="${esc(card.name)}">` : ''}
+        ${images.length > 1 ? `<button class="round flip" id="flip" aria-label="Flip card"><svg class="ico"><use href="#i-flip"/></svg></button>` : ''}
+      </div>
+      <div class="info">
+        ${example ? '<span class="example">Example card</span>' : ''}
+        ${faces.map(f => faceHTML(f, card)).join('')}
+        ${foreign ? `<div class="printed">Printed as <b>${esc(printedName || card.name)}</b> (${esc(LANGS[card.lang] || card.lang)}). Text shown is the English Oracle text.</div>` : ''}
+      </div>
+    </div>
+    ${pricesHTML(card)}
+    <section class="block" id="printings-block" hidden><h3 id="printings-title">Printings</h3><div class="prints" id="printings"></div></section>
+    ${commanderHTML(card, faces)}
+    <section class="block"><h3>Legality</h3>
+      <div class="legal">${FORMATS.map(([k, n]) => `<div><span>${n}</span><span class="s-${leg[k] || 'not_legal'}">${STATUS[leg[k]] || 'No'}</span></div>`).join('')}</div>
+    </section>
+    <section class="block"><h3>Rulings</h3><div id="rulings"><p class="empty">Loading rulings…</p></div></section>
+    <div class="meta"><span>${esc(card.set_name)} · ${esc(card.set?.toUpperCase())} #${esc(card.collector_number)}</span><span style="text-transform:capitalize">${esc(card.rarity)}</span>${trLabels(treatmentsOf(card)).map(t => `<span>${t}</span>`).join('')}
+      <a href="${esc(card.scryfall_uri)}" target="_blank" rel="noopener">Open on Scryfall ↗</a></div>
+    ${ui.mode === 'scan' && !example ? '<button class="btn primary again" id="again"><svg class="ico"><use href="#i-cam"/></svg>Scan another card</button>' : ''}`;
+
+  if (images.length > 1) { let i = 0; $('flip').onclick = () => { i = (i + 1) % images.length; $('card-img').src = images[i]; }; }
+  $('again')?.addEventListener('click', () => {
+    setAuto(true); window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!ui.stream) startCamera(); else setStatus('Line up the card name with the gold bar.');
+  });
+  if (!example) remember(card);
+  if (scroll && matchMedia('(max-width:860px)').matches) $('result').scrollIntoView({ behavior: 'smooth' });
+
+  loadPrintings(card);
+  try {
+    const rulings = await CardScanner.rulings(card);
+    $('rulings').innerHTML = rulings.length ? rulings.map(r => `
+      <div class="ruling"><div class="when"><b>${r.source === 'wotc' ? 'Wizards of the Coast' : 'Scryfall note'}</b> · ${esc(fmtDate(r.published_at))}</div>
+      <p>${symbols(r.comment)}</p></div>`).join('') : '<p class="empty">No official rulings for this card.</p>';
+  } catch { $('rulings').innerHTML = '<p class="empty">Rulings aren\'t available offline for this card yet.</p>'; }
+}
+
+async function loadPrintings(card) {
+  let list = [];
+  try { list = await CardScanner.printings(card); } catch {}
+  if (!$('printings') || $('result').dataset.id !== card.id) return; // another card was opened meanwhile
+  if (list.length < 2) return;
+  $('printings-block').hidden = false;
+  $('printings-title').textContent = `Printings · ${list.length}`;
+  $('printings').innerHTML = list.map(v => {
+    const price = v.price ?? v.foil ?? v.etched;
+    const finish = v.price == null && v.foil != null ? ' foil' : v.price == null && v.etched != null ? ' etched' : '';
+    const tags = [...trLabels(v.tr), v.lang !== 'en' ? (LANGS[v.lang] || v.lang.toUpperCase()) : ''].filter(Boolean).join(' · ');
+    return `<button class="pv" data-id="${esc(v.id)}"${v.id === card.id ? ' aria-current="true"' : ''}>
+      <img loading="lazy" src="${esc(v.thumb || '')}" alt="">
+      <span class="pv-set">${esc(v.set.toUpperCase())} #${esc(v.num)}</span>
+      <span class="pv-tr">${esc(tags) || '&nbsp;'}</span>
+      <span class="pv-price">${price == null ? '—' : usd(price) + finish}</span>
+    </button>`;
+  }).join('');
+  $('printings').querySelector('[aria-current]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('.pv'); if (!b || b.getAttribute('aria-current')) return;
+  try { showCard(await CardScanner.byId(b.dataset.id)); } catch (err) { setStatus('Lookup failed: ' + err.message, 'error'); }
+});
+
+/* --- history (this device only) --- */
+// One entry per card (not per printing); it keeps the printing you looked at last.
+// Name is the key, so entries saved before this change also merge.
+function loadHistory() {
+  let h = [];
+  try { h = JSON.parse(localStorage.getItem('oracle-history') || '[]'); } catch {}
+  const seen = new Set();
+  return h.filter(x => x && x.name && !seen.has(x.name) && seen.add(x.name));
+}
+function remember(card) {
+  const h = [{ id: card.id, name: card.name }, ...loadHistory().filter(x => x.name !== card.name)].slice(0, 12);
+  try { localStorage.setItem('oracle-history', JSON.stringify(h)); } catch {}
+  renderHistory();
+}
+function renderHistory() {
+  const h = loadHistory(); $('history-wrap').hidden = !h.length;
+  $('history').innerHTML = h.map(x => `<button data-id="${esc(x.id)}">${esc(x.name.split(' // ')[0])}</button>`).join('');
+}
+$('history').addEventListener('click', async e => {
+  const id = e.target.closest('button')?.dataset.id; if (!id) return;
+  try { showCard(await CardScanner.byId(id), { scroll: true }); } catch (err) { setStatus('Lookup failed: ' + err.message, 'error'); }
+});
+
+/* --- search --- */
+let acTimer;
+function setSearchStatus(msg, kind = '') { const s = $('search-status'); s.hidden = !msg; s.textContent = msg; s.className = 'status ' + kind; }
+$('q').addEventListener('input', () => {
+  clearTimeout(acTimer);
+  const q = $('q').value.trim();
+  if (q.length < 2) { $('suggest').hidden = true; return; }
+  acTimer = setTimeout(async () => {
+    try {
+      const names = (await CardScanner.autocomplete(q)).slice(0, 8);
+      $('suggest').innerHTML = names.map(n => `<button type="button">${esc(n)}</button>`).join('');
+      $('suggest').hidden = !names.length;
+    } catch {}
+  }, 180);
+});
+$('suggest').addEventListener('click', e => { const b = e.target.closest('button'); if (b) lookup(b.textContent, true); });
+$('search-form').addEventListener('submit', e => { e.preventDefault(); const q = $('q').value.trim(); if (q) lookup(q, false); });
+async function lookup(name, exact) {
+  clearTimeout(acTimer); $('suggest').hidden = true; setSearchStatus('Looking up…', 'busy'); $('q').blur();
+  try {
+    let card;
+    if (exact) card = await CardScanner.exact(name);
+    else card = await CardScanner.fuzzy(name).catch(e => {
+      if (e.status !== 404 || !online()) throw e;
+      // Not an English name: try it as a printed name in another language (e.g. typed in Japanese)
+      return CardScanner.foreignName(name).then(c => c && c.lang !== 'en' ? CardScanner.exact(c.name).catch(() => c) : c);
+    });
+    setSearchStatus(''); showCard(card, { scroll: true });
+  } catch (e) { setSearchStatus(e.status === 404 ? `No card matches “${name}”.` : 'Lookup failed: ' + e.message, 'warn'); }
+}
+
+/* --- tabs --- */
+function setMode(mode) {
+  ui.mode = mode;
+  const scan = mode === 'scan';
+  $('tab-scan').setAttribute('aria-selected', scan); $('tab-search').setAttribute('aria-selected', !scan);
+  $('scan-pane').hidden = !scan; $('search-pane').hidden = scan;
+  $('again')?.toggleAttribute('hidden', !scan);
+  if (!scan) { stopCamera(); $('q').focus(); }
+}
+$('tab-scan').onclick = () => setMode('scan');
+$('tab-search').onclick = () => setMode('search');
+$('start-btn').onclick = startCamera;
+$('scan-btn').onclick = () => scanOnce(true);
+$('torch-btn').onclick = toggleTorch;
+$('auto').onclick = () => setAuto(!ui.auto);
+
+/* --- saved card data: status chip + sheet --- */
+let updating = false, lastMsg = null;
+function renderData(progress) {
+  const i = CardData.info, off = !online();
+  const chip = $('sync'), t = $('sync-text');
+  if (updating) { chip.className = 'chip busy'; t.textContent = progress != null ? `Updating ${Math.round(progress * 100)}%` : 'Checking…'; }
+  else if (i) { chip.className = 'chip ok'; t.textContent = off ? 'Offline · ready' : 'Ready offline'; }
+  else { chip.className = 'chip warn'; t.textContent = off ? 'Offline' : 'Not saved yet'; }
+  $('progress').style.width = updating && progress != null ? (progress * 100) + '%' : '0';
+  $('d-bar').hidden = !updating; $('d-fill').style.width = ((progress || 0) * 100) + '%';
+  $('d-net').textContent = off ? 'Offline' : 'Online';
+  $('d-cards').textContent = i ? i.cards.toLocaleString() : 'None yet';
+  $('d-built').textContent = i?.built ? fmtDate(i.built) : '–';
+  $('d-prices').textContent = i?.pricesDate ? fmtDate(i.pricesDate) : '–';
+  $('update-btn').disabled = updating || off;
+  $('update-btn').lastChild.textContent = updating ? 'Updating…' : 'Update now';
+  const msg = $('d-msg');
+  if (lastMsg) { msg.textContent = lastMsg.text; msg.className = 'msg ' + (lastMsg.kind || ''); }
+  else if (off) { msg.textContent = i ? 'You\'re offline. Saved cards still work.' : 'Connect to the internet to save cards for offline use.'; msg.className = 'msg'; }
+  else { msg.textContent = 'The app updates itself whenever it opens with internet. Prices refresh daily.'; msg.className = 'msg'; }
+}
+async function runUpdate(force) {
+  if (updating || !online()) return;
+  updating = true; lastMsg = null; renderData();
+  try {
+    const r = await CardData.update({ force, onProgress: p => renderData(p) });
+    updating = false;
+    if (r.status === 'unavailable') lastMsg = { text: CardData.ready ? 'Couldn\'t reach the update server. Using the saved copy.' : 'Offline mode works when the app is opened from its GitHub address.', kind: 'warn' };
+    else if (force) lastMsg = { text: r.status === 'updated' ? 'Updated.' : 'Already up to date.' };
+  } catch (e) {
+    updating = false;
+    lastMsg = { text: `Couldn't update (${e.message}).${CardData.ready ? ' Using the saved copy.' : ''}`, kind: 'warn' };
+  }
+  renderData();
+}
+const sheet = $('sheet');
+$('sync').onclick = () => { lastMsg = null; renderData(); if (sheet.showModal) sheet.showModal(); else sheet.setAttribute('open', ''); };
+$('sheet-close').onclick = () => sheet.close();
+sheet.addEventListener('click', e => { if (e.target === sheet) sheet.close(); });
+$('update-btn').onclick = () => runUpdate(true);
+addEventListener('online', () => { renderData(); runUpdate(false); });
+addEventListener('offline', () => renderData());
+
+/* --- start up --- */
+renderHistory();
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(() => {});
+
+/* --- inside the life tracker --- */
+const EMBED = document.documentElement.classList.contains('embed');
+function closeLookup() { stopCamera(); parent.postMessage({ type: 'card-lookup-close' }, location.origin); }
+$('close-lookup').onclick = closeLookup;
+addEventListener('keydown', e => { if (EMBED && e.key === 'Escape' && !$('sheet').open) closeLookup(); });
+addEventListener('message', e => {
+  if (e.origin !== location.origin) return;
+  if (e.data?.type === 'card-lookup-open') { setMode('scan'); setAuto(true); if (!ui.stream) startCamera(); }
+  if (e.data?.type === 'card-lookup-hidden') stopCamera();
+});
+if (EMBED) startCamera();
+(async () => {
+  await Promise.all([CardData.loadSaved(), Promise.race([symbolsReady, new Promise(r => setTimeout(r, 1500))])]);
+  renderData();
+  navigator.storage?.persist?.().catch(() => {});   // ask the browser not to clear saved cards
+  const h = loadHistory();
+  try { h.length ? await showCard(await CardScanner.byId(h[0].id)) : await showCard(await CardScanner.exact('Thassa\'s Oracle'), { example: true }); }
+  catch { $('result').innerHTML = '<div class="placeholder">Scan or search for a card to see its Oracle text, price and rulings.</div>'; }
+  runUpdate(false);
+})();
+</script>
+</body>
+</html>
