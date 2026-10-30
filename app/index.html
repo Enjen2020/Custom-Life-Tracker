@@ -248,7 +248,7 @@
 [data-theme="light"] .primary .menu-subtitle{color:#c9ccd3}
 [data-theme="light"] footer{color:#5d6069}
 .avatar-preview{font-size:14px}.card-tool-body .avatar-preview{font-size:12px}
-.commander-source-avatar{width:22px;height:22px;font-size:10px}
+.commander-source-avatar{width:22px;height:22px;font-size:12px;letter-spacing:-.02em}
 .keypad-placeholder{color:#ffffff99}[data-theme="light"] .keypad-placeholder,.bg-light .keypad-placeholder{color:#00000099}
 .card-tool-check input{width:24px;height:24px}
 .card-tool-counter-btn{flex:none}
@@ -430,6 +430,50 @@ footer{flex-direction:column;align-items:center;gap:6px}
 [data-theme="light"] .life-value.life-flash,.bg-light .life-value.life-flash{animation-name:lifeflashlight}
 @keyframes lifeflashlight{0%{color:#8a5a00;transform:scale(1.12)}100%{transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){.life-value.life-flash{animation:none;outline:2px solid #f0c060;outline-offset:4px;border-radius:8px}}
+
+/* Short cards (most phone layouts): the life box gives up space first; badges and the turn
+   controls share one row; no empty space is reserved for a turn row. Tall cards are unchanged. */
+.player-card{container-type:size}
+.card-foot{display:flex;flex-direction:column;gap:inherit;flex:none;min-width:0;position:relative;z-index:2}
+@container (max-height:320px){
+  .card-foot{flex-direction:row;align-items:center;gap:6px;min-height:0}
+  .card-foot .turn-row{order:2;flex:none;min-height:0;flex-wrap:nowrap;gap:6px}
+  .card-foot .turn-row:empty{display:none}
+  .card-foot .turn-row:empty::after{content:none}
+  .card-foot .counter-row{order:1;flex:1 1 auto;min-width:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:1px 0}
+  .card-foot .counter-row::-webkit-scrollbar{display:none}
+  .card-foot .counter-badge{flex:none;min-height:30px}
+  .card-foot:not(:has(.counter-badge)):not(:has(.turn-clock)){display:none}
+  .life-control{min-height:48px;flex:1 1 0}
+  .life-value{font-size:clamp(28px,24cqh,72px)!important}
+  .turn-clock{font-size:12px;gap:4px}
+  .pass-turn-btn{min-height:34px;padding:4px 9px;font-size:12px}
+}
+@container (max-height:220px){
+  .player-card{gap:4px}
+  .player-header{padding-block:2px}
+  #table-grid .player-slot .tool-btn{width:34px;height:34px}
+  .avatar{width:30px;height:30px}
+  .life-control{min-height:40px}
+  .life-value{font-size:clamp(26px,26cqh,56px)!important}
+  .turn-clock .turn-time{font-size:12px}
+  .card-foot .counter-badge{min-height:28px;padding:2px 7px}
+  .turn-flag{top:6px;padding:2px 8px}
+}
+@container (max-height:150px){
+  #table-grid .player-slot .tool-btn{width:30px;height:30px}
+  .avatar{width:28px;height:28px}
+  .player-header{padding-block:0;row-gap:2px}
+  .life-control{min-height:34px}
+  .life-value{font-size:clamp(24px,28cqh,48px)!important}
+  .card-foot .counter-badge{min-height:26px}
+  .pass-turn-btn{min-height:30px;padding:3px 8px}
+  .turn-flag{display:none} /* no room: the highlighted border and Pass Turn button show whose turn it is */
+}
+/* narrow and short: show just the time and the Pass Turn button */
+@container (max-height:320px) and (max-width:240px){
+  .pass-turn-btn svg{display:none}
+}
 </style>
 </head>
 <body>
@@ -747,7 +791,7 @@ function expandNarrowPanels(){const grid=$('#table-grid');if(!grid)return;const 
 // Center hub: sits where the cards meet (nearest row/column boundary to the middle of the table).
 function placeHub(){const hub=$('#table-hub'),grid=$('#table-grid'),shell=$('#screen-game .game-shell');if(!hub||!grid||!shell)return;
  const slots=$$('#table-grid .player-slot:not(.panel-expanded)');
- slots.forEach(sl=>{const c=sl.querySelector('.player-card');if(c){c.style.paddingTop='';c.style.paddingBottom='';}});
+ slots.forEach(sl=>{const c=sl.querySelector('.player-card');if(c){c.style.paddingTop='';c.style.paddingBottom='';c.style.paddingLeft='';c.style.paddingRight='';}});
  const gb=grid.getBoundingClientRect(),sb=shell.getBoundingClientRect(),rects=slots.map(sl=>sl.getBoundingClientRect());if(!rects.length)return;
  const cx=gb.left+gb.width/2,cy=gb.top+gb.height/2;
  // a row boundary: below one card there is another card
@@ -761,7 +805,7 @@ function placeHub(){const hub=$('#table-hub'),grid=$('#table-grid'),shell=$('#sc
  // reaches along their edge instead of deep into them.
  const near=slots.filter((sl,i)=>{const r=rects[i];return r.left<x+40&&r.right>x-40&&r.top<y+40&&r.bottom>y-40;});
  const sideways=near.filter(sl=>[90,270].includes(Number(sl.dataset.rotation))).length;
- hub.classList.toggle('stacked',sideways*2>near.length);
+ hub.classList.toggle('stacked',sideways*2>near.length||(bestY===Infinity&&bestX!==Infinity));
  hub.style.left=(x-sb.left+shell.scrollLeft)+'px';hub.style.top=(y-sb.top+shell.scrollTop)+'px';
  // Cards under the hub push their nearest content (header, or bottom rows) away from it.
  const hr=hub.getBoundingClientRect(),pad=6,H={l:hr.left-pad,r:hr.right+pad,t:hr.top-pad,b:hr.bottom+pad};
@@ -769,10 +813,22 @@ function placeHub(){const hub=$('#table-hub'),grid=$('#table-grid'),shell=$('#sc
   const ix={l:Math.max(r.left,H.l),r:Math.min(r.right,H.r),t:Math.max(r.top,H.t),b:Math.min(r.bottom,H.b)};if(ix.l>=ix.r||ix.t>=ix.b)return;
   const th=(Number(sl.dataset.rotation)||0)*Math.PI/180,co=Math.cos(th),si=Math.sin(th),W=card.offsetWidth,Hh=card.offsetHeight,scx=r.left+r.width/2,scy=r.top+r.height/2;
   const ys=[[ix.l,ix.t],[ix.r,ix.t],[ix.l,ix.b],[ix.r,ix.b]].map(([px,py])=>{const dx=px-scx,dy=py-scy;return Hh/2+(-dx*si+dy*co);});
-  const lo=Math.min(...ys),hi=Math.max(...ys),cs=getComputedStyle(card);
-  if((lo+hi)/2<Hh/2)card.style.paddingTop=Math.max(parseFloat(cs.paddingTop),hi+4)+'px';
+  const xs=[[ix.l,ix.t],[ix.r,ix.t],[ix.l,ix.b],[ix.r,ix.b]].map(([px,py])=>{const dx=px-scx,dy=py-scy;return W/2+(dx*co+dy*si);});
+  const lo=Math.min(...ys),hi=Math.max(...ys),xl=Math.min(...xs),xh=Math.max(...xs),cs=getComputedStyle(card);
+  // Push content away along whichever direction costs the card the smallest share of its space: from the
+  // top or bottom when the hub sits at an end, from the side when it bites into the middle of a tall card.
+  const top=(lo+hi)/2<Hh/2,vCost=(top?hi:Hh-lo)/Hh,left=(xl+xh)/2<W/2,hCost=(left?xh:W-xl)/W;
+  if(hCost<vCost&&hCost<0.3){if(left)card.style.paddingLeft=Math.max(parseFloat(cs.paddingLeft),xh+4)+'px';else card.style.paddingRight=Math.max(parseFloat(cs.paddingRight),W-xl+4)+'px';}
+  else if(top)card.style.paddingTop=Math.max(parseFloat(cs.paddingTop),hi+4)+'px';
   else card.style.paddingBottom=Math.max(parseFloat(cs.paddingBottom),Hh-lo+4)+'px';});}
-function fitRotatedCards(){requestAnimationFrame(placeHub);expandNarrowPanels();$$('#table-grid .player-slot').forEach(slot=>{const card=slot.querySelector('.player-card');if(!card)return;const rotation=Number(slot.dataset.rotation||0);if(rotation===90||rotation===270){card.style.left='50%';card.style.top='50%';card.style.right='auto';card.style.bottom='auto';card.style.width=`${slot.clientHeight}px`;card.style.height=`${slot.clientWidth}px`;card.style.transform=`translate(-50%,-50%) rotate(${rotation}deg)`;}else{card.style.left='0';card.style.top='0';card.style.right='auto';card.style.bottom='auto';card.style.width='100%';card.style.height='100%';card.style.transform=`rotate(${rotation}deg)`;}});}
+// Short cards show badges in one row: keep the most important ones that fit and fold the rest into "+N".
+function fitBadges(){$$('#table-grid .card-foot .counter-row').forEach(row=>{if(getComputedStyle(row).flexWrap!=='nowrap')return;
+ row.querySelectorAll('.badge-fold').forEach(x=>x.remove());const badges=[...row.querySelectorAll('.counter-badge')];badges.forEach(b=>b.classList.remove('hidden'));
+ if(row.scrollWidth<=row.clientWidth+1)return;const pid=row.closest('[data-player-id]')?.dataset.playerId;
+ const fold=document.createElement('button');fold.type='button';fold.className='counter-badge more-badge badge-fold';fold.dataset.action='manage-counters';if(pid)fold.dataset.playerId=pid;row.appendChild(fold);
+ let hidden=0;for(let i=badges.length-1;i>=0&&row.scrollWidth>row.clientWidth+1;i--){if(badges[i].classList.contains('more-badge'))continue;badges[i].classList.add('hidden');hidden++;fold.textContent='+'+hidden;fold.setAttribute('aria-label',`${hidden} more counters; open counters`);}
+ if(!hidden)fold.remove();});}
+function fitRotatedCards(){requestAnimationFrame(()=>{placeHub();fitBadges();});expandNarrowPanels();$$('#table-grid .player-slot').forEach(slot=>{const card=slot.querySelector('.player-card');if(!card)return;const rotation=Number(slot.dataset.rotation||0);if(rotation===90||rotation===270){card.style.left='50%';card.style.top='50%';card.style.right='auto';card.style.bottom='auto';card.style.width=`${slot.clientHeight}px`;card.style.height=`${slot.clientWidth}px`;card.style.transform=`translate(-50%,-50%) rotate(${rotation}deg)`;}else{card.style.left='0';card.style.top='0';card.style.right='auto';card.style.bottom='auto';card.style.width='100%';card.style.height='100%';card.style.transform=`rotate(${rotation}deg)`;}});}
 function cardPanelRoot(playerId){return document.querySelector(`[data-card-panel-owner="${playerId}"]`);}
 function setCardPanel(playerId,type,extra={}){if(!getPlayer(playerId))return;cardPanels[playerId]={type,...extra};renderGame();}
 function closeCardPanel(playerId){delete cardPanels[playerId];delete customizeDrafts[playerId];delete avatarDrafts[playerId];renderGame();}
@@ -867,8 +923,8 @@ ensureTurnState(g);updateGameClocks();const undoBtn=$('#table-undo-btn');if(undo
    ${active?'<span class="turn-flag">Your turn</span>':''}
    <div class="life-value ${p.life<0?'negative':''} ${isLowLife(p)?'low':''}">${p.life}</div>${lifeDeltaMarkup(p)}${lifeWarnMarkup(p)}
   </div>
-  <div class="turn-row">${active?`<div class="turn-clock"><span class="your-turn">YOUR TURN</span> <span class="turn-time" data-turn-elapsed="${p.id}">${formatDuration(clockNow(g)-(g.turnStartedAt||clockNow(g)))}</span></div><button class="pass-turn-btn" data-action="pass-turn" data-player-id="${p.id}" aria-label="Pass turn from ${esc(p.name)}">Pass Turn ${icon('chevron')}</button>`:''}</div>
-  <div class="counter-row">${badgeMarkup(p)}</div>`;return `<div class="player-slot rot-${p.rotation||0}" style="grid-area:${seatArea}" data-player-slot data-player-id="${p.id}" data-rotation="${p.rotation||0}"><article class="${cardClass(p)} ${active?'is-active-turn':''}" data-player-card="${p.id}" style="--player-accent:${playerAccent(p)}">${cardContent}</article></div>`;}).join('');if(focusState){const el=document.getElementById(focusState.id);if(el){el.focus({preventScroll:true});try{if(focusState.start!==null)el.setSelectionRange(focusState.start,focusState.end);}catch(_){}}}requestAnimationFrame(()=>{fitRotatedCards();if(shell)shell.scrollTop=viewState.shellTop;$$('#table-grid [data-card-panel-owner]').forEach(panel=>{const body=panel.querySelector('[data-card-tool-body]');if(body){const key=`${panel.dataset.cardPanelOwner}:${panel.dataset.cardPanelType}`;body.scrollTop=Number(cardToolScrollPositions[key]||0);}});window.scrollTo?.(viewState.windowX,viewState.windowY);requestAnimationFrame(()=>{if(shell)shell.scrollTop=viewState.shellTop;$$('#table-grid [data-card-panel-owner]').forEach(panel=>{const body=panel.querySelector('[data-card-tool-body]');if(body){const key=`${panel.dataset.cardPanelOwner}:${panel.dataset.cardPanelType}`;body.scrollTop=Number(cardToolScrollPositions[key]||0);}});window.scrollTo?.(viewState.windowX,viewState.windowY);});});updateGameClocks();}
+  <div class="card-foot"><div class="turn-row">${active?`<div class="turn-clock"><span class="your-turn">YOUR TURN</span> <span class="turn-time" data-turn-elapsed="${p.id}">${formatDuration(clockNow(g)-(g.turnStartedAt||clockNow(g)))}</span></div><button class="pass-turn-btn" data-action="pass-turn" data-player-id="${p.id}" aria-label="Pass turn from ${esc(p.name)}">Pass Turn ${icon('chevron')}</button>`:''}</div>
+  <div class="counter-row">${badgeMarkup(p)}</div></div>`;return `<div class="player-slot rot-${p.rotation||0}" style="grid-area:${seatArea}" data-player-slot data-player-id="${p.id}" data-rotation="${p.rotation||0}"><article class="${cardClass(p)} ${active?'is-active-turn':''}" data-player-card="${p.id}" style="--player-accent:${playerAccent(p)}">${cardContent}</article></div>`;}).join('');if(focusState){const el=document.getElementById(focusState.id);if(el){el.focus({preventScroll:true});try{if(focusState.start!==null)el.setSelectionRange(focusState.start,focusState.end);}catch(_){}}}requestAnimationFrame(()=>{fitRotatedCards();if(shell)shell.scrollTop=viewState.shellTop;$$('#table-grid [data-card-panel-owner]').forEach(panel=>{const body=panel.querySelector('[data-card-tool-body]');if(body){const key=`${panel.dataset.cardPanelOwner}:${panel.dataset.cardPanelType}`;body.scrollTop=Number(cardToolScrollPositions[key]||0);}});window.scrollTo?.(viewState.windowX,viewState.windowY);requestAnimationFrame(()=>{if(shell)shell.scrollTop=viewState.shellTop;$$('#table-grid [data-card-panel-owner]').forEach(panel=>{const body=panel.querySelector('[data-card-tool-body]');if(body){const key=`${panel.dataset.cardPanelOwner}:${panel.dataset.cardPanelType}`;body.scrollTop=Number(cardToolScrollPositions[key]||0);}});window.scrollTo?.(viewState.windowX,viewState.windowY);});});updateGameClocks();}
 function swapSeatPositions(sourceId,targetId){const g=currentGame();if(!g||!sourceId||!targetId||sourceId===targetId)return;const seats=normalizedSeatOrder(g).slice(),beforeSeatOrder=seats.slice(),sourceIndex=seats.indexOf(sourceId),targetIndex=seats.indexOf(targetId);if(sourceIndex<0||targetIndex<0||sourceIndex===targetIndex)return;const beforeTurnOrder=(g.turnOrder||[]).slice();[seats[sourceIndex],seats[targetIndex]]=[seats[targetIndex],seats[sourceIndex]];g.seatOrder=seats;g.turnOrder=turnOrderForSeats(seats,g.turnDirection);const source=getPlayer(sourceId),target=getPlayer(targetId);
 // Rotation comes from the seat, so each card automatically faces the edge it moved to.
 const message=`Seat swap · ${source?.name||sourceId} and ${target?.name||targetId}`;const eventId=appendEvent(message,'seating',{playerId:sourceId,targetPlayerId:targetId});pushFrame({description:message,changes:[{kind:'seatOrder',beforeSeatOrder,beforeTurnOrder}],eventIds:[eventId]});renderGame();}
