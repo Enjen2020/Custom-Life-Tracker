@@ -313,7 +313,8 @@
 
 /* Center hub (replaces the top bar): Undo + one round button where the cards meet */
 #screen-game .game-shell{position:relative}
-.table-hub{position:absolute;z-index:30;display:flex;align-items:center;gap:6px;transform:translate(-50%,-50%);transform:translate(calc(-50% - 25px),-50%);pointer-events:none}
+.table-hub{position:absolute;z-index:30;display:flex;align-items:center;gap:6px;transform:translate(calc(-50% - 25px),-50%);pointer-events:none}
+.table-hub.stacked{flex-direction:column;transform:translate(-50%,calc(-50% - 25px))}
 .table-hub button{pointer-events:auto}
 .hub-btn,.hub-undo{display:grid;place-items:center;border-radius:50%;padding:0;position:relative;box-shadow:0 4px 18px #0007,0 0 0 4px var(--bg)}
 .hub-btn{width:56px;height:56px;border:1px solid #f2f3f5;background:#f2f3f5;color:#17181c}
@@ -353,6 +354,36 @@
 .setup-player .select-field{flex:0 1 44%;min-width:0}
 .seat-dot{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#101114;font-size:13px;font-weight:800}
 .life-control{-webkit-touch-callout:none}
+
+/* Table menu: compact grid that fits without scrolling */
+.table-menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.table-tile{display:flex;align-items:center;gap:10px;min-height:52px;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface2);color:var(--text);font-size:15px;font-weight:680;text-align:left}
+.table-tile svg{width:20px;height:20px;flex:none;color:var(--soft)}
+.table-tile:hover{background:var(--surface3)}
+.table-menu-direction{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0 0;padding:12px 2px 0;border-top:1px solid #2b2d33}
+.table-menu-end{margin-top:14px;padding-top:14px;border-top:1px solid #2b2d33;display:grid;gap:8px}
+.table-menu-end .modal-note{margin:0;text-align:center}
+[data-theme="light"] .table-menu-direction,[data-theme="light"] .table-menu-end{border-color:#e4e6eb}
+[data-theme="light"] .table-tile{background:#fff}[data-theme="light"] .table-tile:hover{background:#eef0f3}
+.hub-clock-row{margin-bottom:14px;padding-bottom:14px}
+@media(max-height:640px){.hub-clock{font-size:26px}.table-tile{min-height:46px}.table-menu-direction{margin-top:10px;padding-top:10px}.table-menu-end{margin-top:10px;padding-top:10px}}
+/* Layout previews follow the screen shape */
+.layout-mini.upright{height:150px;width:auto;aspect-ratio:10/14;margin:0 auto}
+.layout-options:has(.layout-mini.upright){grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+.layout-option:has(.layout-mini.upright) .layout-label{text-align:center}
+
+/* Short, wide screens (phone held sideways): table menu in two columns so it fits without scrolling */
+@media(max-height:520px) and (min-width:600px){
+  .tm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);grid-template-areas:"clock tiles" "dir end";column-gap:18px;align-items:start}
+  .tm .hub-clock-row{grid-area:clock;margin:0;padding:0 0 10px;border:0}
+  .tm .table-menu-grid{grid-area:tiles}
+  .tm .table-menu-direction{grid-area:dir;margin:0;padding-top:10px}
+  .tm .table-menu-end{grid-area:end;margin-top:8px;padding-top:0;border:0}
+  .tm .table-menu-end .modal-note{display:none}
+  .tm .table-tile{min-height:44px;padding:8px 12px}
+  .dialog-header{padding:10px 16px}
+  .dialog-body{padding:12px 16px}
+}
 </style>
 </head>
 <body>
@@ -366,7 +397,7 @@
 <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
 <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 10-13h-7z"/></symbol>
 <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M2 14h4m4-6h4m4 8h4"/></symbol>
-<symbol id="i-lookup" viewBox="0 0 24 24"><rect x="5" y="3" width="11" height="15" rx="1.5"/><path d="M8 7h5"/><circle cx="16.5" cy="16.5" r="3.5"/><path d="m19 19 2.5 2.5"/></symbol><symbol id="i-hub" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol><symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22z"/><path d="M4 5.5v14A2.5 2.5 0 0 1 6.5 17H20M8 7h8M8 10h7"/></symbol>
+<symbol id="i-lookup" viewBox="0 0 24 24"><rect x="5" y="3" width="11" height="15" rx="1.5"/><path d="M8 7h5"/><circle cx="16.5" cy="16.5" r="3.5"/><path d="m19 19 2.5 2.5"/></symbol><symbol id="i-hub" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/></symbol><symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22z"/><path d="M4 5.5v14A2.5 2.5 0 0 1 6.5 17H20M8 7h8M8 10h7"/></symbol>
 <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/></symbol>
 <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="m19.4 15 .1.1 1.4 1.1-1.5 2.6-1.7-.7a8 8 0 0 1-1.7 1L15.7 21h-3.1l-.3-1.9a8 8 0 0 1-1.8-1l-1.7.7-1.5-2.6 1.5-1.2a7 7 0 0 1 0-2L7.3 12l1.5-2.6 1.7.7a8 8 0 0 1 1.8-1L12.6 7h3.1l.3 1.9a8 8 0 0 1 1.7 1l1.7-.7 1.5 2.6-1.4 1.1a7 7 0 0 1-.1 2.1Z"/></symbol>
 <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 21v-1.5a6.5 6.5 0 0 1 13 0V21M16 4.8a3.5 3.5 0 0 1 0 6.7M18 14a5.5 5.5 0 0 1 3.5 5.1V21"/></symbol>
@@ -414,7 +445,7 @@
   <div class="panel"><h3 class="panel-title">Number of players</h3><p class="small muted">Choose how many people are playing.</p><div class="player-count-grid" id="player-count-options"></div><p class="small muted" style="margin:12px 0 0">You'll choose the starting player from the game table when everyone is ready to start the timer.</p></div>
   <div class="panel"><h3 class="panel-title">Starting life total</h3><div class="segmented life-presets" id="life-presets" role="group" aria-label="Common starting life totals"></div><p class="small muted" style="margin:12px 0 0">Or set any whole number:</p><div class="life-input-row" style="margin-top:8px"><button class="round-btn" data-action="setup-life-step" data-delta="-1" aria-label="Decrease starting life"><svg><use href="#i-minus"/></svg></button><input id="starting-life-input" class="text-field" type="number" step="1" inputmode="numeric" value="40" aria-label="Starting life total"><button class="round-btn" data-action="setup-life-step" data-delta="1" aria-label="Increase starting life"><svg><use href="#i-plus"/></svg></button></div><p class="small muted" style="margin:10px 0 0">Quick Start remembers this player count and life total.</p></div>
   <div class="panel" style="grid-column:1/-1"><h3 class="panel-title">Players</h3><p class="small muted">Name each seat, or pick a saved profile. Seats are numbered clockwise, matching the table layout below.</p><div class="setup-players" id="setup-players"></div></div>
-  <div class="panel" style="grid-column:1/-1"><h3 class="panel-title">Table layout</h3><p class="small muted">How are players sitting around the tablet? Each card will face its player. The colored edge marks where each player sits, and the numbers show the seats in clockwise order. You choose clockwise or counterclockwise turns when you start the timer.</p><div class="layout-options" id="layout-options"></div></div>
+  <div class="panel" style="grid-column:1/-1"><h3 class="panel-title">Table layout</h3><p class="small muted">How are players sitting around the device? Each card faces its player; the colored edge marks where each player sits. This preview matches how you're holding the device, and the table adjusts if you turn it.</p><div class="layout-options" id="layout-options"></div></div>
  </div>
  <div class="setup-actions"><button class="btn-primary" data-action="start-game"><svg><use href="#i-play"/></svg> Start Game</button><button class="btn-secondary" data-action="load-last-setup"><svg><use href="#i-zap"/></svg> Load Last Setup</button></div>
  <div class="small muted">Colors, pictures and card designs can be changed from each player's menu during the game.</div>
@@ -519,9 +550,22 @@ const LAYOUTS={
 };
 function layoutsFor(count){const list=LAYOUTS[count]||LAYOUTS[4];return [...list,{...list[0],id:'flat',label:'All facing this side',seats:list[0].seats.map(([a])=>[a,0])}];}
 function layoutFor(count,id){const list=layoutsFor(count);return list.find(l=>l.id===id)||list[0];}
-function gameLayout(g){return layoutFor(g.players.length,g.layout);}
+// Layouts are drawn for a device lying sideways, players along its long top and bottom edges.
+// When the screen is upright, turn the whole plan a quarter turn so those players sit along the long
+// left and right edges, each card still facing its player. Layouts where everyone faces this side
+// only change shape. Seat numbers (and so turn order) stay the same.
+function isUpright(){return window.innerHeight>window.innerWidth;}
+function orientLayout(layout,upright=isUpright()){
+ if(!upright)return layout;
+ const grid=layout.areas.map(r=>r.trim().split(/\s+/)),R=grid.length,C=grid[0].length;
+ const areas=Array.from({length:C},(_,r)=>Array.from({length:R},(_,c)=>grid[R-1-c][r]).join(' '));
+ const flat=layout.seats.every(([,rot])=>!rot);
+ const seats=layout.seats.map(([a,rot])=>[a,flat?0:((rot||0)+90)%360]);
+ return {...layout,areas,cols:undefined,rows:layout.cols||undefined,seats};
+}
+function gameLayout(g){return orientLayout(layoutFor(g.players.length,g.layout));}
 function seatRotation(g,index){return gameLayout(g).seats[index]?.[1]||0;}
-function layoutMiniMarkup(layout){const cols=layout.cols||`repeat(${layout.areas[0].split(' ').length},minmax(0,1fr))`;return `<div class="layout-mini" style="grid-template-areas:${layout.areas.map(r=>`'${r}'`).join(' ')};grid-template-columns:${cols}">${layout.seats.map(([area,rot],i)=>`<span class="r${rot}" style="grid-area:${area}">${i+1}</span>`).join('')}</div>`;}
+function layoutMiniMarkup(layout){layout=orientLayout(layout);const cols=layout.cols||`repeat(${layout.areas[0].split(' ').length},minmax(0,1fr))`;const rows=layout.rows||`repeat(${layout.areas.length},minmax(0,1fr))`;return `<div class="layout-mini${isUpright()?' upright':''}" style="grid-template-areas:${layout.areas.map(r=>`'${r}'`).join(' ')};grid-template-columns:${cols};grid-template-rows:${rows}">${layout.seats.map(([area,rot],i)=>`<span class="r${rot}" style="grid-area:${area}">${i+1}</span>`).join('')}</div>`;}
 function layoutOptionsMarkup(count,selected,action){return layoutsFor(count).map(l=>`<button type="button" class="layout-option ${l.id===selected?'selected':''}" data-action="${action}" data-layout="${l.id}" aria-pressed="${l.id===selected}">${layoutMiniMarkup(l)}<span class="layout-label">${esc(l.label)}</span></button>`).join('');}
 function validPermutation(order,ids){return Array.isArray(order)&&order.length===ids.length&&new Set(order).size===ids.length&&ids.every(id=>order.includes(id));}
 function normalizedSeatOrder(g){const ids=g.players.map(p=>p.id);if(!validPermutation(g.seatOrder,ids))g.seatOrder=ids.slice();return g.seatOrder;}
@@ -622,6 +666,11 @@ function placeHub(){const hub=$('#table-hub'),grid=$('#table-grid'),shell=$('#sc
  // a column boundary that exists at that height
  let x=cx,bestX=Infinity;rects.forEach(a=>rects.forEach(b=>{if(b.left>a.right-1&&b.left-a.right<30&&a.top<y+40&&a.bottom>y-40&&b.top<y+40&&b.bottom>y-40){const m=(a.right+b.left)/2;if(Math.abs(m-cx)<bestX){bestX=Math.abs(m-cx);x=m;}}}));
  if(bestX===Infinity)x=cx;
+ // Stack Undo above the clock button when the cards around the hub are turned sideways, so the hub
+ // reaches along their edge instead of deep into them.
+ const near=slots.filter((sl,i)=>{const r=rects[i];return r.left<x+40&&r.right>x-40&&r.top<y+40&&r.bottom>y-40;});
+ const sideways=near.filter(sl=>[90,270].includes(Number(sl.dataset.rotation))).length;
+ hub.classList.toggle('stacked',sideways*2>near.length);
  hub.style.left=(x-sb.left+shell.scrollLeft)+'px';hub.style.top=(y-sb.top+shell.scrollTop)+'px';
  // Cards under the hub push their nearest content (header, or bottom rows) away from it.
  const hr=hub.getBoundingClientRect(),pad=6,H={l:hr.left-pad,r:hr.right+pad,t:hr.top-pad,b:hr.bottom+pad};
@@ -707,7 +756,7 @@ const shell=$('#screen-game .game-shell');const viewState={shellTop:shell?.scrol
 $$('#table-grid [data-card-panel-owner]').forEach(panel=>{const body=panel.querySelector('[data-card-tool-body]');if(body){const key=`${panel.dataset.cardPanelOwner}:${panel.dataset.cardPanelType}`;cardToolScrollPositions[key]=body.scrollTop;}});
 // Keep whoever is typing in a card's form focused (with their cursor) when another player's action redraws the table.
 const focused=document.activeElement,focusState=focused&&focused.id&&focused.closest?.('#table-grid')?{id:focused.id,start:(()=>{try{return focused.selectionStart}catch(_){return null}})(),end:(()=>{try{return focused.selectionEnd}catch(_){return null}})()}:null;
-ensureTurnState(g);updateGameClocks();const undoBtn=$('#table-undo-btn');if(undoBtn)undoBtn.disabled=!(g.undoStack.length||Object.keys(pendingLife).length);const grid=$('#table-grid'),layout=gameLayout(g);grid.className=`table-grid layout-grid layout-${layout.id}${g.timerStarted&&g.activePlayerId?' turns-on':''}`;grid.style.gridTemplateAreas=layout.areas.map(r=>`"${r}"`).join(' ');grid.style.gridTemplateColumns=layout.cols||`repeat(${layout.areas[0].split(' ').length},minmax(0,1fr))`;grid.style.gridTemplateRows=`repeat(${layout.areas.length},minmax(0,1fr))`;const seats=normalizedSeatOrder(g);const visualPlayers=seats.map(id=>g.players.find(p=>p.id===id)).filter(Boolean);grid.innerHTML=visualPlayers.map((p,seatIndex)=>{p.rotation=seatRotation(g,seatIndex);const seatArea=layout.seats[seatIndex]?.[0]||'auto';const active=!!g.timerStarted&&p.id===g.activePlayerId&&!p.eliminated;let cardContent='';
+ensureTurnState(g);updateGameClocks();const undoBtn=$('#table-undo-btn');if(undoBtn)undoBtn.disabled=!(g.undoStack.length||Object.keys(pendingLife).length);const grid=$('#table-grid'),layout=gameLayout(g);grid.className=`table-grid layout-grid layout-${layout.id}${g.timerStarted&&g.activePlayerId?' turns-on':''}`;grid.style.gridTemplateAreas=layout.areas.map(r=>`"${r}"`).join(' ');grid.style.gridTemplateColumns=layout.cols||`repeat(${layout.areas[0].split(' ').length},minmax(0,1fr))`;grid.style.gridTemplateRows=layout.rows||`repeat(${layout.areas.length},minmax(0,1fr))`;const seats=normalizedSeatOrder(g);const visualPlayers=seats.map(id=>g.players.find(p=>p.id===id)).filter(Boolean);grid.innerHTML=visualPlayers.map((p,seatIndex)=>{p.rotation=seatRotation(g,seatIndex);const seatArea=layout.seats[seatIndex]?.[0]||'auto';const active=!!g.timerStarted&&p.id===g.activePlayerId&&!p.eliminated;let cardContent='';
   // Cards carry only per-player controls; Undo, the log and End Game live in the top bar.
   const cmdrNames=[p.commander,p.partner?p.commander2:''].filter(Boolean);
   const header=`<header class="player-header">${avatarMarkup(p)}<div class="player-name" title="${esc(p.name)}"><span class="pn">${esc(p.name)}</span>${cmdrNames.length?`<span class="cmdr-line" title="${esc(cmdrNames.join(' & '))}">${esc(cmdrNames.join(' & '))}</span>`:''}</div><div class="player-header-spacer"></div><div class="player-tools">
@@ -730,13 +779,13 @@ function swapSeatPositions(sourceId,targetId){const g=currentGame();if(!g||!sour
 // Rotation comes from the seat, so each card automatically faces the edge it moved to.
 const message=`Seat swap · ${source?.name||sourceId} and ${target?.name||targetId}`;const eventId=appendEvent(message,'seating',{playerId:sourceId,targetPlayerId:targetId});pushFrame({description:message,changes:[{kind:'seatOrder',beforeSeatOrder,beforeTurnOrder}],eventIds:[eventId]});renderGame();}
 function setGameLayout(id){const g=currentGame();if(!g)return;const layout=layoutFor(g.players.length,id);if(layout.id!==g.layout){g.layout=layout.id;g.turnOrder=turnOrderForSeats(normalizedSeatOrder(g),g.turnDirection);store.lastSetup={...(store.lastSetup||{}),layouts:{...(store.lastSetup?.layouts||{}),[g.players.length]:layout.id}};appendEvent(`Table layout changed · ${layout.label}`,'seating');saveStore();}closeModal();renderGame();}
-function openLayoutPicker(){const g=currentGame();if(!g)return;openModal('Table Layout',`<p class="modal-note">Choose how players are seated around the tablet. The colored edge shows where each player sits; numbers show the seats in clockwise order. Drag a card's handle to swap seats.</p><div class="layout-options">${layoutOptionsMarkup(g.players.length,g.layout,'set-game-layout')}</div>`,true);}
+function openLayoutPicker(){const g=currentGame();if(!g)return;openModal('Table Layout',`<p class="modal-note">Choose how players are seated around the device. The colored edge shows where each player sits; numbers show the seats in clockwise order. The table adjusts when you turn the device. Drag a card's handle to swap seats.</p><div class="layout-options">${layoutOptionsMarkup(g.players.length,g.layout,'set-game-layout')}</div>`,true);}
 function handleSeatDragStart(e){const handle=e.target.closest('[data-action="drag-seat"]');if(!handle||e.button!==0)return;const slot=handle.closest('[data-player-slot]');if(!slot)return;e.preventDefault();if(seatDragState)cancelSeatDrag();seatDragState={sourceId:slot.dataset.playerId,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,moved:false,sourceSlot:slot,targetId:slot.dataset.playerId};slot.classList.add('dragging');document.body.classList.add('seat-drag-active');try{handle.setPointerCapture(e.pointerId);}catch(_){} }
 function handleSeatDragMove(e){const d=seatDragState;if(!d||e.pointerId!==d.pointerId)return;if(!d.moved&&Math.hypot(e.clientX-d.startX,e.clientY-d.startY)<7)return;d.moved=true;const at=document.elementFromPoint(e.clientX,e.clientY);const targetSlot=at?.closest('[data-player-slot]');$$('#table-grid .player-slot').forEach(slot=>slot.classList.toggle('drop-target',!!targetSlot&&slot===targetSlot&&slot.dataset.playerId!==d.sourceId));d.targetId=targetSlot?.dataset.playerId||d.sourceId;}
 function cleanupSeatDrag(){if(seatDragState?.pointerId!==undefined){try{const active=document.querySelector('[data-action="drag-seat"]:active');active?.releasePointerCapture?.(seatDragState.pointerId);}catch(_){}}$$( '#table-grid .player-slot').forEach(slot=>slot.classList.remove('dragging','drop-target'));document.body.classList.remove('seat-drag-active');seatDragState=null;}
 function finishSeatDrag(e){const d=seatDragState;if(!d)return;if(e&&e.pointerId!==undefined&&e.pointerId!==d.pointerId)return;let targetId=d.targetId;if(e&&d.moved){const at=document.elementFromPoint(e.clientX,e.clientY);const targetSlot=at?.closest('[data-player-slot]');if(targetSlot)targetId=targetSlot.dataset.playerId;}cleanupSeatDrag();if(d.moved&&targetId&&targetId!==d.sourceId)swapSeatPositions(d.sourceId,targetId);}
 function cancelSeatDrag(e){if(!seatDragState)return;if(e?.pointerId!==undefined&&e.pointerId!==seatDragState.pointerId)return;cleanupSeatDrag();}
-window.addEventListener('resize',()=>requestAnimationFrame(fitRotatedCards));
+let lastUpright=isUpright();window.addEventListener('resize',()=>{const up=isUpright();if(up!==lastUpright){lastUpright=up;if(currentScreen==='game'&&currentGame())renderGame();else if(currentScreen==='setup')renderSetup();if($('#modal-backdrop').classList.contains('open')&&$('#dialog-title')?.textContent==='Table Layout')openLayoutPicker();}requestAnimationFrame(fitRotatedCards);});
 function persistProfiles(){if(currentGame())syncProfiles(currentGame().players);saveStore();}
 var modalOpener=null;function openModal(title,body,wide=false){if(!$('#modal-backdrop').classList.contains('open'))modalOpener=document.activeElement;document.querySelectorAll('.screen').forEach(sc=>sc.inert=true);$('#dialog').classList.toggle('wide',wide);$('#dialog-title').textContent=title;$('#dialog-body').innerHTML=body;$('#modal-backdrop').classList.add('open');document.body.style.overflow='hidden';const first=$('#dialog-body input:not([type=file]),#dialog-body button,#dialog-body select');if(first)setTimeout(()=>first.focus({preventScroll:true}),20);}
 function closeModal(){const wasOpen=$('#modal-backdrop').classList.contains('open');$('#modal-backdrop').classList.remove('open');document.body.style.overflow='';document.querySelectorAll('.screen').forEach(sc=>sc.inert=false);if(wasOpen&&modalOpener&&document.contains(modalOpener))modalOpener.focus({preventScroll:true});modalOpener=null;}
@@ -763,7 +812,12 @@ function performRoll(playerId){const p=getPlayer(playerId),draft=diceDrafts[play
 function logEntriesMarkup(events){return [...events].reverse().map(e=>`<div class="log-entry ${e.undone?'undone':''}"><div class="log-time">${new Date(e.at).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}</div><div><div class="log-text">${esc(e.message)}${e.undone?' · UNDONE':''}</div><div class="log-tag">${esc(e.type)}</div></div></div>`).join('');}
 function openTableLog(){const g=currentGame();if(!g)return;openModal('Game Log',`<p class="modal-note">${g.events.length} events · shared by all players</p><div class="log-list">${logEntriesMarkup(g.events)}</div>`,true);}
 function hubTimerButton(g){if(!g.timerStarted)return `<button type="button" class="btn-primary hub-timer-btn" id="hub-timer-btn" data-action="open-start-timer">${icon('play')} Start Timer</button>`;return `<button type="button" class="btn-secondary hub-timer-btn" id="hub-timer-btn" data-action="toggle-pause" data-state="${g.paused?'Resume':'Pause'}">${icon(g.paused?'play':'pause')} ${g.paused?'Resume':'Pause'}</button>`;}
-function openTableMenu(){const g=currentGame();if(!g)return;const running=!!(g.timerStarted&&g.startedAt);openModal('Table',`<div class="hub-clock-row"><div><div class="field-label" style="margin:0 0 2px">Game time${g.paused?' · paused':''}</div><div class="hub-clock" id="hub-clock">${formatDuration(running?clockNow(g)-g.startedAt:0)}</div>${g.timerStarted?'':'<div class="modal-note" style="margin:2px 0 0">Timers haven\'t started yet.</div>'}</div>${hubTimerButton(g)}</div><div class="table-menu"><button type="button" class="btn-secondary btn-block" data-action="table-log">${icon('history')} Game Log</button><button type="button" class="btn-secondary btn-block" data-action="table-layout">${icon('users')} Table Layout</button><div class="table-menu-direction"><span class="field-label" style="margin:0">Turn direction</span><div class="segmented">${directionOptionsMarkup(g.turnDirection,'set-direction')}</div></div><button type="button" class="btn-secondary btn-block" data-action="end-game">${icon('trophy')} End Game</button><button type="button" class="btn-secondary btn-block" data-action="help">${icon('book')} Help</button><button type="button" class="btn-secondary btn-block" data-action="return-menu">${icon('x')} Main Menu</button></div><p class="modal-note" style="margin:12px 0 0">The game stays saved if you leave; resume it from the main menu.</p>`);}
+function openTableMenu(){const g=currentGame();if(!g)return;const running=!!(g.timerStarted&&g.startedAt);openModal('Table',`<div class="tm"><div class="hub-clock-row"><div><div class="field-label" style="margin:0 0 2px">Game time${g.paused?' · paused':''}</div><div class="hub-clock" id="hub-clock">${formatDuration(running?clockNow(g)-g.startedAt:0)}</div>${g.timerStarted?'':'<div class="modal-note" style="margin:2px 0 0">Timers haven\'t started yet.</div>'}</div>${hubTimerButton(g)}</div><div class="table-menu-grid">
+<button type="button" class="table-tile" data-action="table-log">${icon('history')}<span>Game Log</span></button>
+<button type="button" class="table-tile" data-action="table-layout">${icon('users')}<span>Table Layout</span></button>
+<button type="button" class="table-tile" data-action="help">${icon('book')}<span>Help</span></button>
+<button type="button" class="table-tile" data-action="return-menu">${icon('home')}<span>Main Menu</span></button>
+</div><div class="table-menu-direction"><span class="field-label" style="margin:0">Turn direction</span><div class="segmented">${directionOptionsMarkup(g.turnDirection,'set-direction')}</div></div><div class="table-menu-end"><button type="button" class="btn-secondary btn-block" data-action="end-game">${icon('trophy')} End Game</button><p class="modal-note">Leaving keeps the game saved; resume it from the main menu.</p></div></div>`,true);}
 function openExactLife(playerId){if(!getPlayer(playerId))return;flushPendingLife();setCardPanel(playerId,'exact-life',{entry:''});}
 function pressKeypad(playerId,key){const state=cardPanels[playerId];if(!state||state.type!=='exact-life')return;let entry=String(state.entry||'');if(key==='set'){const value=Number(entry);if(!/^-?\d+$/.test(entry)||!Number.isInteger(value))return;delete cardPanels[playerId];setExactLife(playerId,value);renderGame();return;}if(key==='⌫')entry=entry.slice(0,-1);else if(key==='±')entry=entry.startsWith('-')?entry.slice(1):`-${entry}`;else if(/^\d$/.test(key)&&entry.replace('-','').length<4)entry=(entry==='0'?'':entry==='-0'?'-':entry)+key;state.entry=entry;renderGame();}
 function endGamePrompt(){const g=currentGame();if(!g)return;const choiceStyle='width:100%;text-align:left;color:var(--text);background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:14px 4px;cursor:pointer;display:flex;align-items:center;gap:12px';const options=g.players.map(p=>`<button type="button" class="modal-row result-choice" style="${choiceStyle}" data-action="set-result" data-result="${p.id}" aria-label="Declare ${esc(p.name)} the winner"><div class="modal-row-copy"><div class="modal-row-title">${esc(p.name)}${p.eliminated?' · Eliminated':''}</div><div class="modal-row-sub">Tap to declare winner · Final life: ${p.life}</div></div>${icon('chevron')}</button>`).join('');openModal('End Game',`<p class="modal-note">Choose a result below. Selecting a winner or Draw / No Winner will immediately save the result and open the game-over screen.</p><button type="button" class="modal-row result-choice" style="${choiceStyle}" data-action="set-result" data-result="draw" aria-label="End as a draw"><div class="modal-row-copy"><div class="modal-row-title">Draw / No Winner</div><div class="modal-row-sub">Finish the game without a declared winner.</div></div>${icon('chevron')}</button>${options}<div class="dialog-footer"><button type="button" class="btn-secondary" data-action="close-modal">Cancel</button></div>`);}
