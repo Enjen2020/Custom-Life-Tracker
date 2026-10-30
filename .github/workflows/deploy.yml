@@ -1,0 +1,67 @@
+# Rebuilds the offline card data from Scryfall and publishes the app to GitHub Pages.
+# Runs every day, whenever you change a file in the repository, and when you press
+# "Run workflow" on the Actions tab.
+name: Update cards and publish
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 10 * * *"   # once a day, 10:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Copy the app
+        run: |
+          mkdir -p site
+          cp -r app/. site/
+
+      - name: Download the text reader for offline use
+        run: |
+          mkdir -p /tmp/pkgs site/vendor/core site/vendor/lang
+          cd /tmp/pkgs
+          npm pack tesseract.js@5.1.1 tesseract.js-core@5.1.1 @tesseract.js-data/eng
+          for f in *.tgz; do mkdir -p "${f%.tgz}"; tar xzf "$f" -C "${f%.tgz}"; done
+          cp tesseract.js-5.1.1/package/dist/tesseract.min.js tesseract.js-5.1.1/package/dist/worker.min.js "$GITHUB_WORKSPACE/site/vendor/"
+          cp tesseract.js-core-5.1.1/package/tesseract-core* "$GITHUB_WORKSPACE/site/vendor/core/"
+          LANG_FILE=$(find . -path '*eng*' -name 'eng.traineddata.gz' | grep best_int | head -n 1)
+          [ -z "$LANG_FILE" ] && LANG_FILE=$(find . -name 'eng.traineddata.gz' | head -n 1)
+          cp "$LANG_FILE" "$GITHUB_WORKSPACE/site/vendor/lang/"
+          ls -la "$GITHUB_WORKSPACE/site/vendor" "$GITHUB_WORKSPACE/site/vendor/core" "$GITHUB_WORKSPACE/site/vendor/lang"
+
+      - name: Build card data from Scryfall
+        run: |
+          pip install ijson
+          python scripts/build_data.py site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
