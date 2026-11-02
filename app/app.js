@@ -1546,6 +1546,7 @@ function expandNarrowPanels() {
     const open = !!slot.querySelector('[data-card-panel-owner]');
     slot.classList.remove('panel-expanded');
     slot.style.removeProperty('--x');
+    slot.style.top = slot.style.left = slot.style.width = slot.style.height = '';
     if (!open) return;
     const rot = Number(slot.dataset.rotation || 0),
       across = rot === 90 || rot === 270 ? slot.clientHeight : slot.clientWidth,
@@ -1723,11 +1724,9 @@ function fitBadges() {
     if (!hidden) fold.remove();
   });
 }
+// Sizes sideways cards, places the center button and folds badges. Runs right after each redraw, before the
+// screen updates: doing it a frame later showed a half-laid-out table for a moment, so the screen jittered.
 function fitRotatedCards() {
-  requestAnimationFrame(() => {
-    placeHub();
-    fitBadges();
-  });
   expandNarrowPanels();
   $$('#table-grid .player-slot').forEach(slot => {
     const card = slot.querySelector('.player-card');
@@ -1751,6 +1750,8 @@ function fitRotatedCards() {
       card.style.transform = `rotate(${rotation}deg)`;
     }
   });
+  placeHub();
+  fitBadges();
 }
 function cardPanelRoot(playerId) {
   return document.querySelector(`[data-card-panel-owner="${playerId}"]`);
@@ -2048,6 +2049,14 @@ function renderGame() {
       } catch (_) {}
     }
   }
+  const restorePanelScroll = () =>
+    $$('#table-grid [data-card-panel-owner]').forEach(panel => {
+      const body = panel.querySelector('[data-card-tool-body]');
+      if (body) body.scrollTop = Number(cardToolScrollPositions[`${panel.dataset.cardPanelOwner}:${panel.dataset.cardPanelType}`] || 0);
+    });
+  fitRotatedCards();
+  if (shell) shell.scrollTop = viewState.shellTop;
+  restorePanelScroll();
   requestAnimationFrame(() => {
     fitRotatedCards();
     if (shell) shell.scrollTop = viewState.shellTop;
