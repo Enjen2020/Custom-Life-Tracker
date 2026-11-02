@@ -83,8 +83,9 @@ jobs:
           LANG_FILE=$(find . -path '*eng*' -name 'eng.traineddata.gz' | grep best_int | head -n 1)
           [ -z "$LANG_FILE" ] && LANG_FILE=$(find . -name 'eng.traineddata.gz' | head -n 1)
           cp "$LANG_FILE" /tmp/vendor/lang/
+          cd "$GITHUB_WORKSPACE"
           for d in site site/beta; do
-            [ -d "$d/scanner" ] && mkdir -p "$d/scanner/vendor" && cp -r /tmp/vendor/. "$d/scanner/vendor/"
+            if [ -d "$d/scanner" ]; then mkdir -p "$d/scanner/vendor" && cp -r /tmp/vendor/. "$d/scanner/vendor/"; fi
           done
           ls -la "$GITHUB_WORKSPACE/site/scanner/vendor"
 
