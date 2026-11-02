@@ -1,0 +1,33 @@
+# Checks the app whenever it changes, on both the live app (main) and the test copy (beta):
+#   - layout: no card's buttons, timer or badges are cut off in any table layout or screen size
+#   - touch: on an Android tablet and phone, player menus scroll with a swipe on every card, and taps
+#     never show a half-laid-out table
+# Both also fail on any JavaScript error.
+name: App checks
+
+on:
+  push:
+    branches: [main, beta]
+    paths: ["app/**", "tests/**", ".github/workflows/checks.yml"]
+  pull_request:
+    paths: ["app/**", "tests/**"]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install a test browser
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+          sudo apt-get install -y fonts-roboto
+      - name: Layout check
+        run: python tests/layout_check.py app
+      - name: Touch check (Android)
+        if: success() || failure()
+        run: python tests/touch_check.py app

@@ -1,9 +1,15 @@
 // Offline support for the installed app: the life tracker (this folder) and card lookup (scanner/).
 // Pages are fetched network-first, so a new upload is picked up the next time the app opens online,
 // and fall back to the saved copy with no connection. Card data is saved by the scanner page itself.
-const SHELL = 'shell-v6';
-const RUNTIME = 'runtime-v1';
-const IMAGES = 'images-v1';
+// The live app and the test copy (/beta/) each have their own worker; cache names carry the folder so
+// neither clears the other's saved files. VERSION is filled in by the publish job, so each new version
+// installs a fresh worker and re-saves the app for offline use.
+const VERSION = '__APP_VERSION__';
+const PREFIX = new URL(self.registration.scope).pathname;
+const SHELL = PREFIX + 'shell-' + VERSION;
+const RUNTIME = PREFIX + 'runtime-v1';
+const IMAGES = PREFIX + 'images-v1';
+const isOwn = name => name.startsWith(PREFIX) && !name.slice(PREFIX.length).includes('/');
 const MAX_IMAGES = 3000; // card pictures and Printings thumbnails, roughly 120 MB
 
 const APP_FILES = [
@@ -29,7 +35,9 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   const keep = [SHELL, RUNTIME, IMAGES];
   event.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => !keep.includes(k)).map(k => caches.delete(k))))
+    // Remove this copy's old caches (and the unprefixed ones from before), never the other copy's.
+    .then(keys => Promise.all(keys.filter(k => !keep.includes(k) && (isOwn(k) || !k.startsWith('/')))
+      .map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -74,6 +82,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
 
   if (url.origin === self.location.origin) {
+    if (url.pathname.startsWith(PREFIX + 'beta/')) return;                     // the test copy has its own worker
     if (url.pathname.includes('/scanner/data/')) return;                       // the scanner downloads card data itself
     if (url.pathname.includes('/scanner/vendor/')) return event.respondWith(cacheFirst(request, RUNTIME)); // text reader
     if (url.pathname.includes('/icons/')) return event.respondWith(cacheFirst(request, SHELL));

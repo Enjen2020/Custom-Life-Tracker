@@ -17,6 +17,22 @@ Life Tracker is unofficial Fan Content permitted under the [Fan Content Policy](
 - **Offline:** the scanner saves every card's text, legality, rulings and prices on the device and refreshes them when online. Card pictures are saved as you look cards up.
 - **Daily updates:** a GitHub job rebuilds the card data from Scryfall every day and republishes the app. Prices are a separate small file, so the big card file only downloads when cards change.
 
+## Test copy and live app
+
+There are two copies of the app:
+
+- **Live app:** https://enjen2020.github.io/Custom-Life-Tracker/ (the `main` branch). This is the one to share.
+- **Test copy:** https://enjen2020.github.io/Custom-Life-Tracker/beta/ (the `beta` branch). New changes go here
+  first. It says **TEST COPY** on the main menu and keeps its own saved games and settings (the first time it
+  opens, it starts from a copy of the live app's), so testing never touches the live app's data.
+
+When the test copy is good: on GitHub, open **Actions → Promote test copy to live → Run workflow**. The live
+app updates a minute or two later.
+
+Each copy shows its version on the main menu and the Help page (the date of the change and a short code). When
+a newer version is published while the app is open, it offers a reload: a bar on the menus, or **New version
+ready · Reload** in the table menu during a game. Games are saved, so reloading is safe.
+
 ## Files
 
 | Path | What it is |
@@ -28,9 +44,12 @@ Life Tracker is unofficial Fan Content permitted under the [Fan Content Policy](
 | `app/sw.js` | Keeps the whole app working offline. |
 | `app/manifest.webmanifest`, `app/icons/` | Lets you install it to your home screen. Folder names are lowercase: GitHub Pages treats `Icons` and `icons` as different. |
 | `scripts/build_data.py` | Turns Scryfall's daily data into the small files the app downloads. |
-| `.github/workflows/deploy.yml` | The daily job: builds the data and publishes the app. |
+| `.github/workflows/deploy.yml` | The daily job: builds the data and publishes both copies, stamping each with its version. |
+| `tests/touch_check.py` | On an emulated Android tablet and phone: player menus scroll with a swipe on every card, and taps never show a half-laid-out table. |
 | `tests/layout_check.py` | Checks every table layout at phone and tablet sizes: nothing on a card may be cut off or hidden by the center button. |
-| `.github/workflows/layout-check.yml` | Runs that check on GitHub whenever the app changes. |
+| `.github/workflows/checks.yml` | Runs both checks on GitHub whenever the app changes, on the live app and the test copy. |
+| `.github/workflows/publish-test-copy.yml` | Republishes the site when the test copy changes. |
+| `.github/workflows/promote.yml` | The **Promote test copy to live** button. |
 | `.prettierrc` | Formatting settings, so the code stays laid out the same way after edits. |
 
 ## Installing on your phone or tablet

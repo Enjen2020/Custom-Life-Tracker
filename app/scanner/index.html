@@ -11,8 +11,9 @@
 <link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 <script>/* Follow the life tracker's light/dark setting (same saved preferences). */
-function applyTrackerTheme(){try{const t=JSON.parse(localStorage.getItem('mtg-life-tracker-prototype-v1'))?.prefs?.theme;if(t==='light')document.documentElement.dataset.theme='light';else delete document.documentElement.dataset.theme;}catch(e){}}
-applyTrackerTheme();addEventListener('storage',e=>{if(e.key==='mtg-life-tracker-prototype-v1')applyTrackerTheme();});
+const TRACKER_KEY='mtg-life-tracker-prototype-v1'+(location.pathname.includes('/beta/')?'-beta':'');
+function applyTrackerTheme(){try{const t=JSON.parse(localStorage.getItem(TRACKER_KEY)||localStorage.getItem('mtg-life-tracker-prototype-v1'))?.prefs?.theme;if(t==='light')document.documentElement.dataset.theme='light';else delete document.documentElement.dataset.theme;}catch(e){}}
+applyTrackerTheme();addEventListener('storage',e=>{if(e.key===TRACKER_KEY)applyTrackerTheme();});
 if(new URLSearchParams(location.search).has('embed'))document.documentElement.classList.add('embed');</script>
 <script src="vendor/tesseract.min.js"></script>
 <script>window.Tesseract || document.write('<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"><\/script>')</script>

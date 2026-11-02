@@ -4009,3 +4009,42 @@ footer {
     display: none;
   }
 }
+/* "A new version is ready" bar (menus and setup; during a game it waits in the table menu) */
+.update-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(14px + var(--safe-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 90;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 650;
+  box-shadow: 0 14px 36px #0007;
+}
+.update-bar[hidden] {
+  display: none;
+}
+.update-bar .btn-primary {
+  min-height: 40px;
+  padding: 0 16px;
+  flex: none;
+}
+.update-row {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  gap: 8px;
+}
+.update-row svg {
+  width: 18px;
+  height: 18px;
+}

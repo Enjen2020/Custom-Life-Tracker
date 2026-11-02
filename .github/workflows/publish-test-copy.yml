@@ -1,0 +1,19 @@
+# When the test copy (the "beta" branch) changes, republish the site. Publishing always runs from main, which
+# builds both the live app and the test copy (see deploy.yml).
+name: Publish test copy
+
+on:
+  push:
+    branches: [beta]
+
+permissions:
+  actions: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start the publish job
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main --repo "$GITHUB_REPOSITORY"

@@ -17,7 +17,8 @@
     <script>
       // Apply the saved theme before first paint so light mode doesn't flash dark.
       try {
-        if (JSON.parse(localStorage.getItem('mtg-life-tracker-prototype-v1'))?.prefs?.theme === 'light')
+        const key = 'mtg-life-tracker-prototype-v1' + (location.pathname.includes('/beta/') ? '-beta' : '');
+        if (JSON.parse(localStorage.getItem(key) || localStorage.getItem('mtg-life-tracker-prototype-v1'))?.prefs?.theme === 'light')
           document.documentElement.dataset.theme = 'light';
       } catch (e) {}
     </script>
@@ -244,7 +245,7 @@
           ><span class="ready"><span class="ready-dot"></span>Ready to play</span>
         </div>
         <footer>
-          <span>Works offline · No account required</span>
+          <span>Works offline · No account required · Version <span data-app-version></span></span>
           <p class="fan-notice">
             Life Tracker is unofficial Fan Content permitted under the
             <a href="https://company.wizards.com/en/legal/fancontentpolicy" target="_blank" rel="noopener"
@@ -620,6 +621,7 @@
             </div>
           </div>
         </div>
+        <p class="fan-notice">Version <span data-app-version></span></p>
         <p class="fan-notice">
           Life Tracker is unofficial Fan Content permitted under the
           <a href="https://company.wizards.com/en/legal/fancontentpolicy" target="_blank" rel="noopener"
@@ -689,6 +691,10 @@
       </div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="update-bar" id="update-bar" role="status" hidden>
+      <span>A new version of Life Tracker is ready.</span>
+      <button type="button" class="btn-primary" data-action="reload-app">Reload</button>
+    </div>
     <div
       class="lookup-layer"
       id="lookup-layer"

@@ -1,5 +1,12 @@
 'use strict';
-const STORE_KEY = 'mtg-life-tracker-prototype-v1';
+// The test copy (the /beta/ address) keeps its own saved games and settings, so trying a new version can
+// never damage the live app's data. The first time it opens, it starts from a copy of the live data.
+const IS_TEST_COPY = location.pathname.includes('/beta/');
+const LIVE_STORE_KEY = 'mtg-life-tracker-prototype-v1';
+const STORE_KEY = IS_TEST_COPY ? LIVE_STORE_KEY + '-beta' : LIVE_STORE_KEY;
+// Filled in by the publish job (date and code version); 'dev' when running from the repository.
+const APP_VERSION = '__APP_VERSION__'.startsWith('__') ? 'dev' : '__APP_VERSION__';
+let updateReady = false; // a newer version has been published (see checkForUpdate)
 const ACCENTS = {
   gold: '#d9bd79',
   white: '#e5e7eb',
@@ -192,7 +199,8 @@ function profileRotation(profile) {
 }
 function loadStore() {
   try {
-    const raw = localStorage.getItem(STORE_KEY);
+    let raw = localStorage.getItem(STORE_KEY);
+    if (!raw && IS_TEST_COPY) raw = localStorage.getItem(LIVE_STORE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
@@ -309,6 +317,7 @@ function notify(message, kind = 'error') {
 }
 function showScreen(name) {
   currentScreen = name;
+  updateBar();
   updateWakeLock();
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === `screen-${name}`));
   window.scrollTo?.(0, 0);
@@ -2791,7 +2800,7 @@ function openTableMenu() {
 <button type="button" class="table-tile" data-action="table-layout">${icon('users')}<span>Table Layout</span></button>
 <button type="button" class="table-tile" data-action="help">${icon('book')}<span>Help</span></button>
 <button type="button" class="table-tile" data-action="return-menu">${icon('home')}<span>Main Menu</span></button>
-</div><div class="table-menu-direction"><span class="field-label" style="margin:0">Turn direction</span><div class="segmented">${directionOptionsMarkup(g.turnDirection, 'set-direction')}</div></div><div class="table-menu-end"><button type="button" class="btn-secondary btn-block" data-action="end-game">${icon('trophy')} End Game</button><p class="modal-note">Leaving keeps the game saved; resume it from the main menu.</p></div></div>`,
+</div>${updateReady ? `<button type="button" class="btn-secondary update-row" data-action="reload-app">${icon('rotate')} New version ready · Reload</button>` : ''}<div class="table-menu-direction"><span class="field-label" style="margin:0">Turn direction</span><div class="segmented">${directionOptionsMarkup(g.turnDirection, 'set-direction')}</div></div><div class="table-menu-end"><button type="button" class="btn-secondary btn-block" data-action="end-game">${icon('trophy')} End Game</button><p class="modal-note">Leaving keeps the game saved; resume it from the main menu.</p></div></div>`,
     true
   );
 }
@@ -3397,6 +3406,9 @@ document.addEventListener('click', e => {
     case 'table-log':
       openTableLog();
       break;
+    case 'reload-app':
+      reloadForUpdate();
+      break;
     case 'exact-life':
       openExactLife(pid);
       break;
@@ -3848,4 +3860,44 @@ document.addEventListener('change', e => {
   }
   renderSetup();
   document.getElementById('setup-profile-' + slot)?.focus();
+});
+
+// Version and updates: show which version this is, and offer a reload when a newer one has been published.
+// (The app picks up new versions by itself when it is opened, but one left open for days keeps running the old.)
+function showVersion() {
+  $$('[data-app-version]').forEach(el => (el.textContent = APP_VERSION + (IS_TEST_COPY ? ' · test copy' : '')));
+  if (IS_TEST_COPY) {
+    document.title = 'Life Tracker (Test)';
+    $$('.brand-kicker').forEach(el => (el.textContent = 'TEST COPY · NOT THE LIVE APP'));
+  }
+}
+async function checkForUpdate() {
+  if (APP_VERSION === 'dev' || updateReady || !navigator.onLine) return;
+  try {
+    const res = await fetch('version.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    const { version } = await res.json();
+    if (version && version !== APP_VERSION) {
+      updateReady = true;
+      updateBar();
+    }
+  } catch (_) {}
+}
+function updateBar() {
+  const bar = $('#update-bar');
+  if (!bar) return;
+  // The table fills the screen during a game, so there the notice waits in the center (table) menu.
+  bar.hidden = !updateReady || currentScreen === 'game';
+}
+function reloadForUpdate() {
+  try {
+    saveStore();
+  } catch (_) {}
+  location.reload();
+}
+showVersion();
+setTimeout(checkForUpdate, 4000);
+setInterval(checkForUpdate, 30 * 60 * 1000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkForUpdate();
 });

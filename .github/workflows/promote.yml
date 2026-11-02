@@ -1,0 +1,41 @@
+# Makes the test copy the live app: copies everything on the "beta" branch to "main" and publishes.
+# Use it from the Actions tab: "Promote test copy to live" → "Run workflow".
+name: Promote test copy to live
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Bring the test copy's changes into the live app
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin beta
+          if git merge-base --is-ancestor origin/beta HEAD; then
+            echo "The live app already has everything in the test copy."; exit 0
+          fi
+          if ! git merge --no-edit origin/beta -m "Promote test copy to live"; then
+            echo "::error::The test copy and the live app changed the same lines, so they can't be combined automatically. Ask Claude to combine them."
+            exit 1
+          fi
+          git push origin HEAD:main
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Changes pushed by this job don't start other jobs by themselves, so start them here.
+          gh workflow run deploy.yml --ref main --repo "$GITHUB_REPOSITORY"
+          gh workflow run checks.yml --ref main --repo "$GITHUB_REPOSITORY"

@@ -1,6 +1,9 @@
 # Rebuilds the offline card data from Scryfall and publishes the app (life tracker + card lookup) to GitHub Pages.
-# Runs every day, whenever you change a file in the repository, and when you press
-# "Run workflow" on the Actions tab.
+# Publishes two copies:
+#   - the live app from the "main" branch, at the main address
+#   - the test copy from the "beta" branch, at <main address>/beta/ (only if that branch exists)
+# Runs every day, whenever main changes, when beta changes (started by publish-test-copy.yml, because only
+# main may publish to Pages), and when you press "Run workflow" on the Actions tab.
 name: Update cards and publish
 
 on:
@@ -23,34 +26,75 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - name: Get the live app (main)
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          path: live
+          fetch-depth: 0
+
+      - name: Is there a test copy (beta)?
+        id: beta
+        run: |
+          if git -C live ls-remote --exit-code --heads origin beta >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get the test copy (beta)
+        if: steps.beta.outputs.exists == 'true'
+        uses: actions/checkout@v5
+        with:
+          ref: beta
+          path: beta
+          fetch-depth: 0
 
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
-      - name: Copy the app
+      - name: Copy the apps and stamp their version
         run: |
-          mkdir -p site
-          cp -r app/. site/
+          stamp() { # $1 = source checkout, $2 = folder in the site
+            mkdir -p "$2"
+            cp -r "$1/app/." "$2/"
+            VERSION="$(git -C "$1" log -1 --format=%cd --date=format:%Y.%m.%d)-$(git -C "$1" rev-parse --short HEAD)"
+            sed -i "s/__APP_VERSION__/$VERSION/g" "$2/app.js" "$2/sw.js"
+            printf '{"version":"%s"}\n' "$VERSION" > "$2/version.json"
+            echo "$2: $VERSION"
+          }
+          stamp live site
+          if [ -d beta ]; then
+            stamp beta site/beta
+            # A separate installed app with its own name, kept out of search engines.
+            sed -i 's/"name": "Life Tracker"/"name": "Life Tracker (Test)"/; s/"short_name": "Life Tracker"/"short_name": "LT Test"/' site/beta/manifest.webmanifest
+            sed -i 's|<head>|<head>\n    <meta name="robots" content="noindex" />|' site/beta/index.html site/beta/scanner/index.html
+          fi
 
       - name: Download the text reader for offline use
         run: |
-          mkdir -p /tmp/pkgs site/scanner/vendor/core site/scanner/vendor/lang
+          mkdir -p /tmp/pkgs /tmp/vendor/core /tmp/vendor/lang
           cd /tmp/pkgs
           npm pack tesseract.js@5.1.1 tesseract.js-core@5.1.1 @tesseract.js-data/eng
           for f in *.tgz; do mkdir -p "${f%.tgz}"; tar xzf "$f" -C "${f%.tgz}"; done
-          cp tesseract.js-5.1.1/package/dist/tesseract.min.js tesseract.js-5.1.1/package/dist/worker.min.js "$GITHUB_WORKSPACE/site/scanner/vendor/"
-          cp tesseract.js-core-5.1.1/package/tesseract-core* "$GITHUB_WORKSPACE/site/scanner/vendor/core/"
+          cp tesseract.js-5.1.1/package/dist/tesseract.min.js tesseract.js-5.1.1/package/dist/worker.min.js /tmp/vendor/
+          cp tesseract.js-core-5.1.1/package/tesseract-core* /tmp/vendor/core/
           LANG_FILE=$(find . -path '*eng*' -name 'eng.traineddata.gz' | grep best_int | head -n 1)
           [ -z "$LANG_FILE" ] && LANG_FILE=$(find . -name 'eng.traineddata.gz' | head -n 1)
-          cp "$LANG_FILE" "$GITHUB_WORKSPACE/site/scanner/vendor/lang/"
-          ls -la "$GITHUB_WORKSPACE/site/scanner/vendor" "$GITHUB_WORKSPACE/site/scanner/vendor/core" "$GITHUB_WORKSPACE/site/scanner/vendor/lang"
+          cp "$LANG_FILE" /tmp/vendor/lang/
+          for d in site site/beta; do
+            [ -d "$d/scanner" ] && mkdir -p "$d/scanner/vendor" && cp -r /tmp/vendor/. "$d/scanner/vendor/"
+          done
+          ls -la "$GITHUB_WORKSPACE/site/scanner/vendor"
 
       - name: Build card data from Scryfall
         run: |
           pip install ijson
-          python scripts/build_data.py site/scanner
+          python live/scripts/build_data.py site/scanner
+          if [ -d site/beta/scanner ]; then
+            cp -r site/scanner/data site/scanner/symbols site/beta/scanner/
+          fi
 
       - uses: actions/upload-pages-artifact@v4
         with:
